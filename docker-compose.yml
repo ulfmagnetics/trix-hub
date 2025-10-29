@@ -1,0 +1,64 @@
+# DEVELOPMENT CONFIGURATION
+# This file includes a volume mount for app.py that requires the source file
+# to exist locally. For production deployment on Raspberry Pi, use:
+# docker-compose.prod.yml instead, or comment out the volumes section below.
+
+services:
+  trix-hub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: trix-hub:latest
+    container_name: trix-hub
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      # trix-server connection (MatrixPortal M4)
+      - TRIX_SERVER_URL=http://192.168.1.XX:80/bitmap
+
+      # Display configuration
+      - MATRIX_WIDTH=64
+      - MATRIX_HEIGHT=32
+
+      # Update interval (seconds)
+      - UPDATE_INTERVAL=300
+
+      # Timezone
+      - TZ=America/New_York
+
+    # Volume mounts for development
+    # WARNING: Requires app.py to exist in the current directory
+    # If you get "not a directory" errors, comment out this entire volumes section
+    # or use docker-compose.prod.yml instead
+    volumes:
+      # Mount app.py for live development (allows editing without rebuild)
+      - ./app.py:/app/app.py:ro
+
+    # Network mode (host network gives access to local network services)
+    # Use 'bridge' for more isolation, 'host' for easier local network access
+    network_mode: bridge
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Resource limits (adjust based on Pi 5 capacity)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+# Optional: Create a custom network for multi-container setups
+# networks:
+#   trix-network:
+#     driver: bridge

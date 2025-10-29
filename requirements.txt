@@ -1,0 +1,13 @@
+# Python dependencies for trix-hub
+# LED Matrix Data Aggregation Hub
+
+# Image processing for bitmap rendering (64x32 BMP)
+Pillow>=10.0.0
+
+# HTTP requests for communicating with trix-server
+requests>=2.31.0
+
+# Future dependencies to be added:
+# - Scheduling library (APScheduler, etc.)
+# - Web framework (Flask/FastAPI for config UI)
+# - Data source integrations (weather API, calendar, etc.)
