@@ -3,10 +3,21 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "docker compose build",
+    "package": "docker save trix-hub:latest | gzip > trix-hub.tar.gz",
+    "transfer": "scp trix-hub.tar.gz docker-compose.prod.yml rpi5-streamer.local:~/trix-hub/",
+    "deploy": "npm run build && npm run package && npm run transfer",
+    "deploy:load": "ssh rpi5-streamer.local 'cd ~/trix-hub && docker load < trix-hub.tar.gz'",
+    "deploy:start": "ssh rpi5-streamer.local 'cd ~/trix-hub && docker compose -f docker-compose.prod.yml up -d'",
+    "deploy:stop": "ssh rpi5-streamer.local 'cd ~/trix-hub && docker compose -f docker-compose.prod.yml down'",
+    "deploy:restart": "ssh rpi5-streamer.local 'cd ~/trix-hub && docker compose -f docker-compose.prod.yml restart'",
+    "deploy:full": "npm run deploy && npm run deploy:load && npm run deploy:start",
+    "logs": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml logs -f'",
+    "status": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml ps'",
+    "clean": "rm -f trix-hub.tar.gz"
   },
   "keywords": [],
-  "author": "",
+  "author": "John Berry (ulfmagnetics@gmail.com)",
   "license": "ISC",
   "description": ""
 }

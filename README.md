@@ -13,7 +13,51 @@ A data aggregation and rendering hub for [trix-server](https://github.com/ulfmag
 - **Production**: Raspberry Pi 5 (ARM64/aarch64) at `rpi5-streamer.local` (192.168.1.82)
 - **Display**: MatrixPortal M4 with 64x32 RGB LED panel
 
-## Docker Workflow
+## Deployment
+
+### Quick Deploy with NPM Scripts
+
+The easiest way to deploy trix-hub is using the npm scripts:
+
+```bash
+# Quick deploy (build, package, and transfer to Pi)
+npm run deploy
+
+# Full deployment (includes loading and starting on Pi)
+npm run deploy:full
+
+# View logs from the running container
+npm run logs
+
+# Check container status
+npm run status
+```
+
+### Available NPM Scripts
+
+**Build & Package:**
+- `npm run build` - Build ARM64 Docker image
+- `npm run package` - Save image to trix-hub.tar.gz
+- `npm run clean` - Remove local tar.gz file
+
+**Deploy:**
+- `npm run deploy` - Build, package, and transfer to Pi
+- `npm run transfer` - Transfer files to Pi only
+
+**Pi Management (via SSH):**
+- `npm run deploy:load` - Load the image on Pi
+- `npm run deploy:start` - Start the container on Pi
+- `npm run deploy:stop` - Stop the container on Pi
+- `npm run deploy:restart` - Restart the container on Pi
+- `npm run deploy:full` - Complete end-to-end deployment
+
+**Monitoring:**
+- `npm run logs` - View container logs (follow mode)
+- `npm run status` - Check container status
+
+**Note:** All Pi deployment commands use `~/trix-hub/` as the deployment directory. Ensure this directory exists on your Pi (the scripts will create it automatically on first transfer).
+
+## Manual Docker Workflow
 
 This project uses Docker for consistent deployment across development and production environments.
 
@@ -31,12 +75,13 @@ docker images | grep trix-hub
 
 ```bash
 # Save the image to a compressed tarball
-mkdir -p build
-docker save trix-hub:latest | gzip > build/trix-hub.tar.gz
+docker save trix-hub:latest | gzip > trix-hub.tar.gz
 
 # Transfer to Raspberry Pi 5 (along with the production compose file)
-scp build/trix-hub.tar.gz docker-compose.prod.yml rpi5-streamer.local:~/trix-hub/
+scp trix-hub.tar.gz docker-compose.prod.yml rpi5-streamer.local:~/trix-hub/
 ```
+
+**Tip:** Use `npm run package` and `npm run transfer` instead for easier workflow.
 
 ### Load and Run on Raspberry Pi 5
 
@@ -45,6 +90,7 @@ scp build/trix-hub.tar.gz docker-compose.prod.yml rpi5-streamer.local:~/trix-hub
 ssh rpi5-streamer.local
 
 # Load the image
+cd ~/trix-hub
 docker load < trix-hub.tar.gz
 
 # Run with the production compose file (no source code needed)
@@ -56,6 +102,8 @@ docker compose -f docker-compose.prod.yml logs -f
 # Stop the service
 docker compose -f docker-compose.prod.yml down
 ```
+
+**Tip:** Use `npm run deploy:load` and `npm run deploy:start` to do this remotely from your PC.
 
 **Note:** Use `docker-compose.prod.yml` for production deployment. The regular `docker-compose.yml` includes development volume mounts that require source files to be present.
 
