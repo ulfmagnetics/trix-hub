@@ -7,6 +7,76 @@ A data aggregation and rendering hub for [trix-server](https://github.com/ulfmag
 - **trix-server** (MatrixPortal M4): HTTP server that receives and displays bitmaps
 - **trix-hub** (Raspberry Pi 5): Data aggregation service that fetches data, renders bitmaps, and uploads to trix-server
 
+### Provider/Renderer Architecture
+
+trix-hub uses a clean separation between **data providers** (what to display) and **renderers** (how to display it):
+
+```
+┌─────────────────┐
+│   Data Source   │ (API, calculation, etc.)
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Data Provider  │ (fetches & structures data)
+└────────┬────────┘
+         │
+         ├─────────────┬─────────────┬──────────────┐
+         │             │             │              │
+┌────────▼────────┐ ┌──▼──────┐ ┌───▼─────┐ ┌─────▼────────┐
+│ Bitmap Renderer │ │  ASCII  │ │  HTML   │ │ Future/Test  │
+│   (PIL Image)   │ │ Renderer│ │ Renderer│ │   Renderers  │
+└────────┬────────┘ └──┬──────┘ └───┬─────┘ └──────────────┘
+         │             │             │
+         v             v             v
+    Matrix Portal   Terminal    Web Browser
+```
+
+**Key Components:**
+
+- **DisplayData**: Structured, renderer-agnostic data format
+- **DataProvider**: Base class for fetching data (e.g., TimeProvider, WeatherProvider)
+  - Includes built-in caching to avoid redundant API calls
+  - Returns DisplayData objects
+- **Renderer**: Base class for rendering DisplayData to specific formats
+  - BitmapRenderer: Creates 64x32 PIL Images for LED matrix
+  - ASCIIRenderer: Creates terminal output for testing
+  - HTMLRenderer: Future web UI support
+
+**Benefits:**
+
+- Single source of truth: Fetch data once, render many ways
+- Easy testing: Use ASCII renderer during development
+- Future-proof: Add new renderers without touching providers
+- Cacheable: Data caching works across all renderers
+
+### Example Usage
+
+```python
+from trixhub.providers import TimeProvider
+from trixhub.renderers import BitmapRenderer, ASCIIRenderer
+from trixhub.client import MatrixClient
+
+# Create provider
+provider = TimeProvider()
+
+# Create renderers
+bitmap_renderer = BitmapRenderer(64, 32)
+ascii_renderer = ASCIIRenderer(64, 16)
+
+# Fetch data once
+data = provider.get_data()
+
+# Render to multiple formats
+ascii_output = ascii_renderer.render(data)  # Terminal testing
+bitmap = bitmap_renderer.render(data)       # LED matrix
+
+# Send to Matrix Portal
+client = MatrixClient("http://trix-server.local/bitmap")
+client.post_bitmap(bitmap)
+```
+
+See [demo.py](demo.py) for more examples.
+
 ## Hardware
 
 - **Development**: Windows 11 PC with Docker Desktop + WSL2
@@ -145,15 +215,74 @@ docker-compose restart
 
 **Note:** The development compose file requires source files to be present locally.
 
+## Testing & Development
+
+### Running the Demo
+
+The [demo.py](demo.py) script demonstrates the provider/renderer architecture:
+
+```bash
+# Run all demos
+python demo.py
+
+# Run specific demo
+python demo.py ascii      # ASCII renderer only
+python demo.py bitmap     # Bitmap renderer only
+python demo.py caching    # Show caching behavior
+python demo.py multiple   # Multiple renderers with same data
+python demo.py live       # Live updates with cache expiration
+```
+
+### Local Testing (No Hardware Required)
+
+Test the library without the LED matrix using the ASCII renderer:
+
+```python
+from trixhub.providers import TimeProvider
+from trixhub.renderers import ASCIIRenderer
+
+provider = TimeProvider()
+renderer = ASCIIRenderer()
+
+data = provider.get_data()
+print(renderer.render(data))
+```
+
+This displays the output in your terminal, making it easy to test providers and data flow before deploying to hardware.
+
+### Adding New Providers
+
+1. Create a new file in `trixhub/providers/` (e.g., `weather_provider.py`)
+2. Subclass `DataProvider`
+3. Implement `fetch_data()` returning `DisplayData`
+4. Optionally override `get_cache_duration()`
+5. Add rendering support in `BitmapRenderer._render_weather()` and `ASCIIRenderer._render_weather()`
+
+See [TimeProvider](trixhub/providers/time_provider.py) for a complete example.
+
 ## Project Roadmap
 
 - **Phase 1**: MatrixPortal Display Server ✓ COMPLETE
-- **Phase 2**: Data Hub Skeleton ← CURRENT
-  - Simple time display as proof-of-concept
-  - Validate Docker workflow end-to-end
-- **Phase 3**: Scheduling system (rotate between data sources)
-- **Phase 4**: Web UI for configuration
+- **Phase 2**: Data Hub Architecture ✓ COMPLETE
+  - Provider/Renderer architecture implemented
+  - TimeProvider working
+  - BitmapRenderer and ASCIIRenderer functional
+  - Local testing support
+- **Phase 3**: Additional Providers ← NEXT
+  - Weather provider
+  - Calendar provider
+  - Quote/message provider
+- **Phase 4**: Scheduling system (rotate between data sources)
+- **Phase 5**: Matrix Portal HTTP integration (replace stub client)
+- **Phase 6**: Web UI for configuration
 
 ## Current Status
 
-This is a hello world validation setup. The current [app.py](app.py) prints system information and a heartbeat to verify ARM64 execution on the Raspberry Pi 5.
+The provider/renderer architecture is complete and functional. The system includes:
+
+- **TimeProvider**: Displays current time and date
+- **BitmapRenderer**: Creates 64x32 bitmaps for LED matrix
+- **ASCIIRenderer**: Creates terminal output for testing
+- **MatrixClient**: Stubbed (saves to files, HTTP POST not yet implemented)
+
+You can test locally with `python demo.py` or build and deploy to the Pi with `npm run deploy:full`.

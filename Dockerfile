@@ -24,12 +24,21 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy fonts
+COPY fonts/ /app/fonts/
+
+# Copy trixhub package
+COPY trixhub/ /app/trixhub/
+
 # Copy application code
 COPY app.py .
 
 # Create non-root user for security
 RUN useradd -m -u 1000 trixhub && \
     chown -R trixhub:trixhub /app
+
+# Add /app to PYTHONPATH so trixhub package can be imported
+ENV PYTHONPATH=/app
 
 # Switch to non-root user
 USER trixhub

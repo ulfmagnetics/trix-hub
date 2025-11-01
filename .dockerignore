@@ -67,3 +67,9 @@ build/
 *.tmp
 *.bak
 *.backup
+
+# Output files (from stub Matrix client)
+output/
+
+# Demo scripts (not needed in production container)
+demo.py
