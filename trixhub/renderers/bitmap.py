@@ -70,7 +70,8 @@ class BitmapRenderer(Renderer):
         """
         Render time display.
 
-        Shows time centered in large font, with date at bottom in smaller font.
+        Shows time centered in large font with ROYGBIV rainbow colors,
+        and date at bottom in smaller font.
 
         Args:
             data: DisplayData with time information
@@ -93,9 +94,36 @@ class BitmapRenderer(Renderer):
         # Get time string
         time_str = data.content.get("time_12h", "??:??")
 
-        # Center time text
-        x, y = center_text(time_str, time_font, self.width, self.height)
-        draw.text((x, y), time_str, fill='white', font=time_font)
+        # ROYGBIV rainbow colors
+        rainbow_colors = [
+            (255, 0, 0),      # Red
+            (255, 127, 0),    # Orange
+            (255, 255, 0),    # Yellow
+            (0, 255, 0),      # Green
+            (0, 0, 255),      # Blue
+            (75, 0, 130),     # Indigo
+            (148, 0, 211),    # Violet
+        ]
+
+        # Center time text - calculate starting position
+        start_x, y = center_text(time_str, time_font, self.width, self.height)
+
+        # Draw each character in a different color (skip spaces)
+        current_x = start_x
+        color_index = 0
+        for char in time_str:
+            # Skip spaces for color assignment
+            if char == ' ':
+                color = (0, 0, 0)  # Black (invisible on black background)
+            else:
+                color = rainbow_colors[color_index % len(rainbow_colors)]
+                color_index += 1
+
+            draw.text((current_x, y), char, fill=color, font=time_font)
+
+            # Move to next character position
+            char_width = draw.textlength(char, font=time_font)
+            current_x += char_width
 
         # Add date at bottom
         date_str = data.content.get("date_short", data.content.get("date", ""))

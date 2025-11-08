@@ -39,7 +39,7 @@ trix-hub uses a clean separation between **data providers** (what to display) an
   - Returns DisplayData objects
 - **Renderer**: Base class for rendering DisplayData to specific formats
   - BitmapRenderer: Creates 64x32 PIL Images for LED matrix
-  - ASCIIRenderer: Creates terminal output for testing
+  - ASCIIRenderer: Creates colored pixel-perfect terminal preview (64x16 using half-block technique)
   - HTMLRenderer: Future web UI support
 
 **Benefits:**
@@ -61,14 +61,17 @@ provider = TimeProvider()
 
 # Create renderers
 bitmap_renderer = BitmapRenderer(64, 32)
-ascii_renderer = ASCIIRenderer(64, 16)
+ascii_renderer = ASCIIRenderer(64, 32)  # Renders as 64x16 colored terminal output
 
 # Fetch data once
 data = provider.get_data()
 
 # Render to multiple formats
-ascii_output = ascii_renderer.render(data)  # Terminal testing
-bitmap = bitmap_renderer.render(data)       # LED matrix
+ascii_output = ascii_renderer.render(data)  # Colored pixel terminal preview
+bitmap = bitmap_renderer.render(data)       # LED matrix bitmap
+
+# Display in terminal
+print(ascii_output)  # See exactly what will appear on LED matrix!
 
 # Send to Matrix Portal
 client = MatrixClient("http://trix-server.local/bitmap")
@@ -205,12 +208,29 @@ Or comment out the `volumes:` section in `docker-compose.yml`.
 
 ### Development
 
-For local development with live code reloading on your Windows PC:
+For local development with live code reloading:
 
+**Quick Iteration (No Rebuild):**
 ```bash
-# The app.py file is mounted as a volume in docker-compose.yml
-# Edit app.py, then restart the container to see changes
-docker-compose restart
+# Source files are mounted as volumes in docker-compose.yml
+# Edit code, then run tests immediately - no rebuild needed!
+npm run test:ascii
+
+# Or run demo.py directly in container
+docker compose run --rm trix-hub python demo.py ascii
+```
+
+**Volume Mounts:**
+- `app.py` - Main application
+- `demo.py` - Demo script
+- `trixhub/` - Full package (providers, renderers, etc.)
+
+Changes to these files take effect immediately without rebuilding the image.
+
+**Before Deploying:**
+```bash
+# Validate with full production build
+npm run test:rebuild
 ```
 
 **Note:** The development compose file requires source files to be present locally.
@@ -226,29 +246,42 @@ The [demo.py](demo.py) script demonstrates the provider/renderer architecture:
 python demo.py
 
 # Run specific demo
-python demo.py ascii      # ASCII renderer only
-python demo.py bitmap     # Bitmap renderer only
+python demo.py ascii      # Colored ASCII pixel renderer (64x16 terminal output)
+python demo.py bitmap     # Bitmap renderer (saves to file via stubbed client)
 python demo.py caching    # Show caching behavior
 python demo.py multiple   # Multiple renderers with same data
 python demo.py live       # Live updates with cache expiration
 ```
 
+**Using npm test scripts** (runs in Docker container):
+```bash
+npm test              # Run all demos in container
+npm run test:ascii    # Quick colored ASCII preview
+npm run test:bitmap   # Bitmap generation test
+npm run test:rebuild  # Rebuild image then test
+```
+
 ### Local Testing (No Hardware Required)
 
-Test the library without the LED matrix using the ASCII renderer:
+Test the library without the LED matrix using the colored ASCII renderer:
 
 ```python
 from trixhub.providers import TimeProvider
 from trixhub.renderers import ASCIIRenderer
 
 provider = TimeProvider()
-renderer = ASCIIRenderer()
+renderer = ASCIIRenderer(64, 32)
 
 data = provider.get_data()
 print(renderer.render(data))
 ```
 
-This displays the output in your terminal, making it easy to test providers and data flow before deploying to hardware.
+The ASCII renderer uses the **half-block technique** (▄ character with ANSI color codes) to display a pixel-perfect 64×16 colored preview of your 64×32 bitmap in the terminal. Each terminal cell shows 2 vertical pixels using foreground and background colors, giving you an exact preview of what will appear on the LED matrix.
+
+**Terminal Requirements:**
+- 24-bit true color support recommended (most modern terminals)
+- Automatically falls back to 256-color mode if true color unavailable
+- Set `COLORTERM=truecolor` environment variable for best results
 
 ### Adding New Providers
 
@@ -256,7 +289,8 @@ This displays the output in your terminal, making it easy to test providers and 
 2. Subclass `DataProvider`
 3. Implement `fetch_data()` returning `DisplayData`
 4. Optionally override `get_cache_duration()`
-5. Add rendering support in `BitmapRenderer._render_weather()` and `ASCIIRenderer._render_weather()`
+5. Add rendering support in `BitmapRenderer._render_weather()`
+   - ASCIIRenderer automatically works by using BitmapRenderer internally
 
 See [TimeProvider](trixhub/providers/time_provider.py) for a complete example.
 
@@ -282,7 +316,7 @@ The provider/renderer architecture is complete and functional. The system includ
 
 - **TimeProvider**: Displays current time and date
 - **BitmapRenderer**: Creates 64x32 bitmaps for LED matrix
-- **ASCIIRenderer**: Creates terminal output for testing
+- **ASCIIRenderer**: Creates 64×16 colored terminal output using half-block technique for pixel-perfect preview
 - **MatrixClient**: Stubbed (saves to files, HTTP POST not yet implemented)
 
-You can test locally with `python demo.py` or build and deploy to the Pi with `npm run deploy:full`.
+You can test locally with `npm run test:ascii` for instant colored preview, or build and deploy to the Pi with `npm run deploy:full`.

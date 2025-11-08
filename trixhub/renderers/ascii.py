@@ -1,143 +1,200 @@
 """
-ASCII renderer for terminal debugging.
+ASCII renderer for terminal debugging with colored pixels.
 
-Renders DisplayData as ASCII art for terminal output, useful for
-testing and debugging without needing the actual LED matrix hardware.
+Renders DisplayData as colored block characters for terminal output.
+Uses half-block technique (▄) with ANSI color codes to display 64x32 bitmaps
+as 64x16 terminal characters, providing pixel-perfect terminal preview.
 """
 
+import os
+from PIL import Image
 from trixhub.providers.base import DisplayData
 from trixhub.renderers.base import Renderer
+from trixhub.renderers.bitmap import BitmapRenderer
 
 
 class ASCIIRenderer(Renderer):
     """
-    Renders DisplayData as ASCII art for terminal display.
+    Renders DisplayData as colored pixel blocks for terminal display.
 
-    Creates a box-drawing representation suitable for terminal output.
-    Useful for testing providers and data flow without hardware.
+    Uses the half-block technique (▄ U+2584) where each terminal cell
+    displays two vertical pixels using foreground and background colors.
+    Automatically detects terminal color capabilities and falls back to
+    256-color mode if 24-bit true color is not available.
     """
 
-    def __init__(self, width: int = 64, height: int = 16):
+    def __init__(self, width: int = 64, height: int = 32):
         """
         Initialize ASCII renderer.
 
         Args:
-            width: Display width in characters (default: 64)
-            height: Display height in lines (default: 16)
+            width: Display width in pixels (default: 64)
+            height: Display height in pixels (default: 32)
         """
         self.width = width
         self.height = height
+        self.bitmap_renderer = BitmapRenderer(width, height)
+
+        # Detect terminal color capabilities
+        self.true_color = self._detect_true_color()
+
+        # ANSI escape codes
+        self.RESET = "\033[0m"
+        self.LOWER_HALF_BLOCK = "▄"
+
+    def _detect_true_color(self) -> bool:
+        """
+        Detect if terminal supports 24-bit true color.
+
+        Checks COLORTERM environment variable for "truecolor" or "24bit".
+        Falls back to 256-color mode if not detected.
+
+        Returns:
+            True if 24-bit color is supported, False otherwise
+        """
+        colorterm = os.environ.get("COLORTERM", "").lower()
+        return colorterm in ("truecolor", "24bit")
 
     def render(self, data: DisplayData) -> str:
         """
-        Render DisplayData to ASCII art string.
+        Render DisplayData to colored ASCII art string.
 
         Args:
             data: Structured data from a provider
 
         Returns:
-            Multi-line ASCII art string
+            Multi-line colored ASCII art string using half-block technique
 
         Raises:
             ValueError: If content type is not supported
         """
-        content_type = data.content.get("type")
+        # Use BitmapRenderer to get PIL Image
+        img = self.bitmap_renderer.render(data)
 
-        if content_type == "time":
-            return self._render_time(data)
-        else:
-            return self._render_error(f"Unknown type: {content_type}")
+        # Convert image to colored ASCII
+        return self._image_to_ascii(img)
 
-    def _render_time(self, data: DisplayData) -> str:
+    def _image_to_ascii(self, img: Image.Image) -> str:
         """
-        Render time display as ASCII art.
+        Convert PIL Image to colored ASCII using half-block technique.
 
-        Creates a bordered box with centered time and date at bottom.
+        Each terminal cell displays 2 vertical pixels:
+        - Background color = top pixel
+        - Foreground color = bottom pixel
+        - Character: ▄ (lower half block)
 
         Args:
-            data: DisplayData with time information
+            img: PIL Image to convert (RGB mode)
 
         Returns:
-            ASCII art representation
+            Colored ASCII string representation
         """
-        output = []
+        # Ensure image is in RGB mode
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
 
-        # Top border
-        output.append("+" + "-" * (self.width - 2) + "+")
+        pixels = img.load()
+        output_lines = []
 
-        # Get time and date strings
-        time_str = data.content.get("time_12h", "??:??")
-        date_str = data.content.get("date", "")
+        # Process image in pairs of rows (each pair becomes one terminal row)
+        for row_pair in range(0, self.height, 2):
+            line = ""
 
-        # Calculate centering for time
-        time_padding = (self.width - len(time_str) - 2) // 2
-        time_line = "|" + " " * time_padding + time_str
-        time_line += " " * (self.width - len(time_line) - 1) + "|"
-        output.append(time_line)
+            for col in range(self.width):
+                # Get top and bottom pixels
+                top_pixel = pixels[col, row_pair]
 
-        # Add blank lines (leave room for date at bottom)
-        for _ in range(self.height - 4):
-            output.append("|" + " " * (self.width - 2) + "|")
+                # Handle odd heights (last row might not have a pair)
+                if row_pair + 1 < self.height:
+                    bottom_pixel = pixels[col, row_pair + 1]
+                else:
+                    bottom_pixel = (0, 0, 0)  # Black for missing pixel
 
-        # Date at bottom
-        date_line = "|" + date_str.ljust(self.width - 2) + "|"
-        output.append(date_line)
+                # Create colored character
+                if self.true_color:
+                    line += self._rgb_half_block(top_pixel, bottom_pixel)
+                else:
+                    line += self._256_half_block(top_pixel, bottom_pixel)
 
-        # Bottom border
-        output.append("+" + "-" * (self.width - 2) + "+")
+            # Reset color at end of line
+            line += self.RESET
+            output_lines.append(line)
 
-        return "\n".join(output)
+        return "\n".join(output_lines)
 
-    def _render_error(self, message: str) -> str:
+    def _rgb_half_block(self, top_rgb: tuple, bottom_rgb: tuple) -> str:
         """
-        Render error message as ASCII.
+        Create half-block character with 24-bit true color.
 
         Args:
-            message: Error message to display
+            top_rgb: RGB tuple for top pixel (background)
+            bottom_rgb: RGB tuple for bottom pixel (foreground)
 
         Returns:
-            ASCII art error representation
+            ANSI colored character string
         """
-        output = []
+        r_top, g_top, b_top = top_rgb
+        r_bot, g_bot, b_bot = bottom_rgb
 
-        # Top border (use different characters for errors)
-        output.append("!" + "=" * (self.width - 2) + "!")
+        # Background (top pixel) + Foreground (bottom pixel) + Character
+        return f"\033[48;2;{r_top};{g_top};{b_top}m\033[38;2;{r_bot};{g_bot};{b_bot}m{self.LOWER_HALF_BLOCK}"
 
-        # Error header
-        header = "! ERROR !".center(self.width - 2)
-        output.append("!" + header + "!")
+    def _256_half_block(self, top_rgb: tuple, bottom_rgb: tuple) -> str:
+        """
+        Create half-block character with 256-color palette.
 
-        # Blank line
-        output.append("!" + " " * (self.width - 2) + "!")
+        Quantizes RGB values to nearest 256-color palette index.
 
-        # Error message (word wrap if needed)
-        words = message.split()
-        current_line = ""
+        Args:
+            top_rgb: RGB tuple for top pixel (background)
+            bottom_rgb: RGB tuple for bottom pixel (foreground)
 
-        for word in words:
-            test_line = current_line + (" " if current_line else "") + word
+        Returns:
+            ANSI colored character string
+        """
+        top_color = self._rgb_to_256(top_rgb)
+        bot_color = self._rgb_to_256(bottom_rgb)
 
-            if len(test_line) <= self.width - 4:
-                current_line = test_line
+        # Background (top pixel) + Foreground (bottom pixel) + Character
+        return f"\033[48;5;{top_color}m\033[38;5;{bot_color}m{self.LOWER_HALF_BLOCK}"
+
+    def _rgb_to_256(self, rgb: tuple) -> int:
+        """
+        Convert RGB color to nearest 256-color palette index.
+
+        Uses the standard 256-color palette layout:
+        - Colors 0-15: System colors (not used for quantization)
+        - Colors 16-231: 6x6x6 RGB cube (216 colors)
+        - Colors 232-255: Grayscale ramp (24 shades)
+
+        Args:
+            rgb: RGB tuple (r, g, b) with values 0-255
+
+        Returns:
+            256-color palette index (16-255)
+        """
+        r, g, b = rgb
+
+        # Check if it's a grayscale color
+        if r == g == b:
+            # Use grayscale ramp (232-255)
+            # Map 0-255 to 0-23 (24 grayscale steps)
+            if r < 8:
+                return 16  # Black from RGB cube
+            elif r > 247:
+                return 231  # White from RGB cube
             else:
-                if current_line:
-                    line = "! " + current_line.ljust(self.width - 4) + " !"
-                    output.append(line)
-                current_line = word
+                gray_index = round((r - 8) / 247 * 23)
+                return 232 + gray_index
 
-        # Add final line
-        if current_line:
-            line = "! " + current_line.ljust(self.width - 4) + " !"
-            output.append(line)
+        # Use 6x6x6 RGB cube (colors 16-231)
+        # Quantize each channel to 0-5
+        r_index = round(r / 255 * 5)
+        g_index = round(g / 255 * 5)
+        b_index = round(b / 255 * 5)
 
-        # Fill remaining height
-        while len(output) < self.height:
-            output.append("!" + " " * (self.width - 2) + "!")
-
-        # Bottom border
-        output.append("!" + "=" * (self.width - 2) + "!")
-
-        return "\n".join(output[:self.height])
+        # Calculate palette index
+        return 16 + (r_index * 36) + (g_index * 6) + b_index
 
     def render_frame(self, data: DisplayData, title: str = None) -> str:
         """
@@ -150,7 +207,7 @@ class ASCIIRenderer(Renderer):
             title: Optional title to display above frame
 
         Returns:
-            ASCII art with optional title
+            Colored ASCII art with optional title
         """
         lines = []
 

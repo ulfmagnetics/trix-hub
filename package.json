@@ -14,7 +14,13 @@
     "deploy:full": "npm run deploy && npm run deploy:load && npm run deploy:start",
     "logs": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml logs -f'",
     "status": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml ps'",
-    "clean": "rm -f trix-hub.tar.gz"
+    "clean": "rm -f trix-hub.tar.gz",
+    "test": "docker compose run --rm trix-hub python demo.py",
+    "test:ascii": "docker compose run --rm trix-hub python demo.py ascii",
+    "test:bitmap": "docker compose run --rm trix-hub python demo.py bitmap",
+    "test:caching": "docker compose run --rm trix-hub python demo.py caching",
+    "test:multiple": "docker compose run --rm trix-hub python demo.py multiple",
+    "test:rebuild": "npm run build && npm run test"
   },
   "keywords": [],
   "author": "John Berry (ulfmagnetics@gmail.com)",

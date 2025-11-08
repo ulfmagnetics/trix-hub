@@ -30,12 +30,14 @@ services:
       - TZ=America/New_York
 
     # Volume mounts for development
-    # WARNING: Requires app.py to exist in the current directory
+    # WARNING: Requires files to exist in the current directory
     # If you get "not a directory" errors, comment out this entire volumes section
     # or use docker-compose.prod.yml instead
     volumes:
-      # Mount app.py for live development (allows editing without rebuild)
+      # Mount source files for live development (allows editing without rebuild)
       - ./app.py:/app/app.py:ro
+      - ./demo.py:/app/demo.py:ro
+      - ./trixhub:/app/trixhub:ro
 
     # Network mode (host network gives access to local network services)
     # Use 'bridge' for more isolation, 'host' for easier local network access
