@@ -68,10 +68,10 @@ class BitmapRenderer(Renderer):
 
     def _render_time(self, data: DisplayData) -> Image.Image:
         """
-        Render time display.
+        Render time display with border and padding.
 
-        Shows time centered in large font with ROYGBIV rainbow colors,
-        and date at bottom in smaller font.
+        Shows time at top in ROYGBIV rainbow colors, date at bottom right-aligned,
+        with 1px grey border and 2px padding.
 
         Args:
             data: DisplayData with time information
@@ -82,6 +82,22 @@ class BitmapRenderer(Renderer):
         # Create black background
         img = Image.new('RGB', (self.width, self.height), color='black')
         draw = ImageDraw.Draw(img)
+
+        # Draw 1-pixel grey border
+        border_color = (128, 128, 128)
+        draw.rectangle(
+            [(0, 0), (self.width - 1, self.height - 1)],
+            outline=border_color,
+            width=1
+        )
+
+        # Define content area (1px border + 2px padding = 3px offset on each side)
+        content_x = 3
+        content_y = 3
+        content_width = self.width - 6  # 58 pixels
+        content_height = self.height - 6  # 26 pixels
+        content_right = self.width - 3  # 61
+        content_bottom = self.height - 3  # 29
 
         # Load fonts
         if self.font_path:
@@ -105,11 +121,13 @@ class BitmapRenderer(Renderer):
             (148, 0, 211),    # Violet
         ]
 
-        # Center time text - calculate starting position
-        start_x, y = center_text(time_str, time_font, self.width, self.height)
+        # Calculate time width for centering
+        time_width = draw.textlength(time_str, font=time_font)
+        time_x = content_x + (content_width - time_width) // 2
+        time_y = content_y + 2  # Near top of content area
 
         # Draw each character in a different color (skip spaces)
-        current_x = start_x
+        current_x = time_x
         color_index = 0
         for char in time_str:
             # Skip spaces for color assignment
@@ -119,16 +137,19 @@ class BitmapRenderer(Renderer):
                 color = rainbow_colors[color_index % len(rainbow_colors)]
                 color_index += 1
 
-            draw.text((current_x, y), char, fill=color, font=time_font)
+            draw.text((current_x, time_y), char, fill=color, font=time_font)
 
             # Move to next character position
             char_width = draw.textlength(char, font=time_font)
             current_x += char_width
 
-        # Add date at bottom
-        date_str = data.content.get("date_short", data.content.get("date", ""))
+        # Add date at bottom, right-aligned
+        date_str = data.content.get("date_us", "")
         if date_str:
-            draw.text((2, self.height - 10), date_str, fill='gray', font=date_font)
+            date_width = draw.textlength(date_str, font=date_font)
+            date_x = content_right - date_width
+            date_y = content_bottom - 10  # 10 pixels from bottom of content area
+            draw.text((date_x, date_y), date_str, fill=(128, 128, 128), font=date_font)
 
         return img
 

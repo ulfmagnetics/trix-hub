@@ -35,6 +35,7 @@ class TimeProvider(DataProvider):
                 "time_24h": now.strftime("%H:%M"),
                 "date": now.strftime("%Y-%m-%d"),
                 "date_short": now.strftime("%m/%d"),
+                "date_us": now.strftime("%m/%d/%Y"),
                 "day_of_week": now.strftime("%A"),
                 "day_of_week_short": now.strftime("%a"),
             },
