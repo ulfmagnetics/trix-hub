@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "prepare": "mkdir -p output",
     "build": "docker compose build",
     "package": "docker save trix-hub:latest | gzip > trix-hub.tar.gz",
     "transfer": "scp trix-hub.tar.gz docker-compose.prod.yml rpi5-streamer.local:~/trix-hub/",

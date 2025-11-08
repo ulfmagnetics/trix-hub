@@ -26,7 +26,7 @@ def demo_ascii_renderer():
 
     # Create provider and renderer
     provider = TimeProvider()
-    renderer = ASCIIRenderer(width=64, height=16)
+    renderer = ASCIIRenderer(width=64, height=32)
 
     # Get data and render
     data = provider.get_data()
@@ -136,7 +136,7 @@ def demo_multiple_renderers():
 
     # Create provider and multiple renderers
     provider = TimeProvider()
-    ascii_renderer = ASCIIRenderer(64, 16)
+    ascii_renderer = ASCIIRenderer(64, 32)
     bitmap_renderer = BitmapRenderer(64, 32)
 
     # Fetch data once
@@ -173,7 +173,7 @@ def demo_live_updates():
     print()
 
     provider = TimeProvider()
-    renderer = ASCIIRenderer(64, 16)
+    renderer = ASCIIRenderer(64, 32)
 
     print("Showing 3 updates (watch time change)...")
     print("Press Ctrl+C to stop")

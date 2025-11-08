@@ -35,7 +35,9 @@ COPY app.py .
 
 # Create non-root user for security
 RUN useradd -m -u 1000 trixhub && \
-    chown -R trixhub:trixhub /app
+    chown -R trixhub:trixhub /app && \
+    mkdir -p /app/output && \
+    chown trixhub:trixhub /app/output
 
 # Add /app to PYTHONPATH so trixhub package can be imported
 ENV PYTHONPATH=/app

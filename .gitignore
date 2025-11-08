@@ -68,3 +68,4 @@ yarn-error.log
 # Generated bitmaps (for testing)
 *.bmp
 test_images/
+output/

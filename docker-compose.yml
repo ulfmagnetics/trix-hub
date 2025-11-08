@@ -38,6 +38,8 @@ services:
       - ./app.py:/app/app.py:ro
       - ./demo.py:/app/demo.py:ro
       - ./trixhub:/app/trixhub:ro
+      # Mount output directory for viewing generated bitmaps
+      - ./output:/app/output:rw
 
     # Network mode (host network gives access to local network services)
     # Use 'bridge' for more isolation, 'host' for easier local network access
