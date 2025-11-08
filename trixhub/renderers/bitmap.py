@@ -160,10 +160,9 @@ class BitmapRenderer(Renderer):
         """
         Render weather display.
 
-        Shows current and forecast weather in two-line format:
-        - Line 1: "72°F" + icon
-        - Separator line
-        - Line 2: "68°F" + icon
+        Layout:
+        - Top row (14px): 3 weather icons (14x14) - current, +3h, +6h
+        - Bottom row (18px): temperature left, wind speed right
 
         Args:
             data: DisplayData with weather information
@@ -193,42 +192,55 @@ class BitmapRenderer(Renderer):
 
         # Load fonts
         if self.font_path:
-            text_font = ImageFont.truetype(self.font_path, 12)
+            text_font = ImageFont.truetype(self.font_path, 10)
         else:
             text_font = ImageFont.load_default()
 
         # Get weather data
         current = data.content.get("current", {})
-        forecast = data.content.get("forecast", {})
+        forecast1 = data.content.get("forecast1", {})
+        forecast2 = data.content.get("forecast2", {})
 
         current_temp = current.get("temperature", 0)
         current_condition = current.get("condition", "cloudy")
+        current_windspeed = current.get("windspeed", 0)
         current_units = current.get("units", "fahrenheit")
 
-        forecast_temp = forecast.get("temperature", 0)
-        forecast_condition = forecast.get("condition", "cloudy")
+        forecast1_condition = forecast1.get("condition", "cloudy")
+        forecast2_condition = forecast2.get("condition", "cloudy")
 
         # Unit symbol
         unit_symbol = "°F" if current_units == "fahrenheit" else "°C"
 
-        # Line 1: Current weather (y=2)
-        current_text = f"{current_temp}{unit_symbol}"
-        draw.text((2, 2), current_text, fill='white', font=text_font)
+        # Top row: 3 weather icons (14x14)
+        # Icon spacing: 4px gap between icons
+        icon1_x = 4
+        icon2_x = 25  # 4 + 14 + 7
+        icon3_x = 46  # 25 + 14 + 7
+        icon_y = 0
 
-        # Current weather icon (12x12 at x=48)
-        current_icon = draw_weather_icon(current_condition)
-        img.paste(current_icon, (48, 2))
+        # Draw icons
+        current_icon = draw_weather_icon(current_condition, size=14)
+        img.paste(current_icon, (icon1_x, icon_y))
 
-        # Separator line (y=15)
-        draw.line([(2, 15), (self.width - 3, 15)], fill=(128, 128, 128), width=1)
+        forecast1_icon = draw_weather_icon(forecast1_condition, size=14)
+        img.paste(forecast1_icon, (icon2_x, icon_y))
 
-        # Line 2: Forecast weather (y=18)
-        forecast_text = f"{forecast_temp}{unit_symbol}"
-        draw.text((2, 18), forecast_text, fill='white', font=text_font)
+        forecast2_icon = draw_weather_icon(forecast2_condition, size=14)
+        img.paste(forecast2_icon, (icon3_x, icon_y))
 
-        # Forecast weather icon (12x12 at x=48)
-        forecast_icon = draw_weather_icon(forecast_condition)
-        img.paste(forecast_icon, (48, 18))
+        # Bottom row: temperature (left) and wind speed (right)
+        text_y = 18  # Centered in bottom 18px area
+
+        # Temperature on left
+        temp_text = f"{current_temp}{unit_symbol}"
+        draw.text((2, text_y), temp_text, fill='white', font=text_font)
+
+        # Wind speed on right
+        wind_text = f"{current_windspeed}mph"
+        wind_width = draw.textlength(wind_text, font=text_font)
+        wind_x = self.width - wind_width - 2
+        draw.text((wind_x, text_y), wind_text, fill='white', font=text_font)
 
         return img
 

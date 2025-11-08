@@ -8,7 +8,7 @@
         "name": "Pittsburgh, PA"
       },
       "units": "fahrenheit",
-      "forecast_hours": 3,
+      "forecast_interval_hours": 3,
       "cache_duration": 600
     },
     "time": {

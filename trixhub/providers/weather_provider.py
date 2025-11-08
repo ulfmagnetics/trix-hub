@@ -60,7 +60,7 @@ class WeatherProvider(DataProvider):
 
         # Get units and forecast settings
         self.units = self.config.get("units", "fahrenheit")
-        self.forecast_hours = self.config.get("forecast_hours", 3)
+        self.forecast_interval_hours = self.config.get("forecast_interval_hours", 3)
 
     def fetch_data(self) -> DisplayData:
         """
@@ -78,9 +78,10 @@ class WeatherProvider(DataProvider):
             params = {
                 "latitude": self.latitude,
                 "longitude": self.longitude,
-                "current": "temperature_2m,weathercode",
+                "current": "temperature_2m,weathercode,windspeed_10m",
                 "hourly": "temperature_2m,weathercode",
                 "temperature_unit": self.units,
+                "windspeed_unit": "mph",
                 "forecast_days": 1,
                 "timezone": "auto"
             }
@@ -94,16 +95,23 @@ class WeatherProvider(DataProvider):
             current_temp = int(round(data["current"]["temperature_2m"]))
             current_code = data["current"]["weathercode"]
             current_condition = self._map_weather_code(current_code)
+            current_windspeed = int(round(data["current"]["windspeed_10m"]))
 
-            # Parse forecast (N hours ahead)
+            # Parse hourly forecast data
             hourly_temps = data["hourly"]["temperature_2m"]
             hourly_codes = data["hourly"]["weathercode"]
 
-            # Get forecast for N hours from now
-            forecast_index = min(self.forecast_hours, len(hourly_temps) - 1)
-            forecast_temp = int(round(hourly_temps[forecast_index]))
-            forecast_code = hourly_codes[forecast_index]
-            forecast_condition = self._map_weather_code(forecast_code)
+            # Get forecast for interval hours ahead (forecast 1)
+            forecast1_index = min(self.forecast_interval_hours, len(hourly_temps) - 1)
+            forecast1_temp = int(round(hourly_temps[forecast1_index]))
+            forecast1_code = hourly_codes[forecast1_index]
+            forecast1_condition = self._map_weather_code(forecast1_code)
+
+            # Get forecast for 2*interval hours ahead (forecast 2)
+            forecast2_index = min(self.forecast_interval_hours * 2, len(hourly_temps) - 1)
+            forecast2_temp = int(round(hourly_temps[forecast2_index]))
+            forecast2_code = hourly_codes[forecast2_index]
+            forecast2_condition = self._map_weather_code(forecast2_code)
 
             # Build DisplayData
             return DisplayData(
@@ -114,13 +122,18 @@ class WeatherProvider(DataProvider):
                     "current": {
                         "temperature": current_temp,
                         "condition": current_condition,
+                        "windspeed": current_windspeed,
                         "units": self.units
                     },
-                    "forecast": {
-                        "temperature": forecast_temp,
-                        "condition": forecast_condition,
-                        "hours_ahead": self.forecast_hours,
-                        "units": self.units
+                    "forecast1": {
+                        "temperature": forecast1_temp,
+                        "condition": forecast1_condition,
+                        "hours_ahead": self.forecast_interval_hours,
+                    },
+                    "forecast2": {
+                        "temperature": forecast2_temp,
+                        "condition": forecast2_condition,
+                        "hours_ahead": self.forecast_interval_hours * 2,
                     }
                 },
                 metadata={

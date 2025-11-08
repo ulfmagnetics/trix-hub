@@ -228,20 +228,27 @@ def demo_weather():
         print(f"  Location: {data.content.get('location')}")
 
         current = data.content.get('current', {})
-        forecast = data.content.get('forecast', {})
+        forecast1 = data.content.get('forecast1', {})
+        forecast2 = data.content.get('forecast2', {})
 
         current_temp = current.get('temperature')
         current_condition = current.get('condition')
+        current_windspeed = current.get('windspeed')
         current_units = current.get('units', 'fahrenheit')
 
-        forecast_temp = forecast.get('temperature')
-        forecast_condition = forecast.get('condition')
-        forecast_hours = forecast.get('hours_ahead', 3)
+        forecast1_temp = forecast1.get('temperature')
+        forecast1_condition = forecast1.get('condition')
+        forecast1_hours = forecast1.get('hours_ahead', 3)
+
+        forecast2_temp = forecast2.get('temperature')
+        forecast2_condition = forecast2.get('condition')
+        forecast2_hours = forecast2.get('hours_ahead', 6)
 
         unit_symbol = '°F' if current_units == 'fahrenheit' else '°C'
 
-        print(f"  Current: {current_temp}{unit_symbol} - {current_condition}")
-        print(f"  Forecast (+{forecast_hours}h): {forecast_temp}{unit_symbol} - {forecast_condition}")
+        print(f"  Current: {current_temp}{unit_symbol} - {current_condition} - {current_windspeed}mph")
+        print(f"  Forecast (+{forecast1_hours}h): {forecast1_temp}{unit_symbol} - {forecast1_condition}")
+        print(f"  Forecast (+{forecast2_hours}h): {forecast2_temp}{unit_symbol} - {forecast2_condition}")
         print()
 
     # Render to ASCII
