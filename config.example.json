@@ -9,7 +9,8 @@
       },
       "units": "fahrenheit",
       "forecast_interval_hours": 3,
-      "cache_duration": 600
+      "cache_duration": 600,
+      "aqi_enabled": true
     },
     "time": {
       "enabled": true,

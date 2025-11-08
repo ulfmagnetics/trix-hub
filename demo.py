@@ -234,6 +234,8 @@ def demo_weather():
         current_temp = current.get('temperature')
         current_condition = current.get('condition')
         current_windspeed = current.get('windspeed')
+        current_wind_direction = current.get('wind_direction')
+        current_aqi = current.get('aqi')
         current_units = current.get('units', 'fahrenheit')
 
         forecast1_temp = forecast1.get('temperature')
@@ -246,9 +248,14 @@ def demo_weather():
 
         unit_symbol = '°F' if current_units == 'fahrenheit' else '°C'
 
-        print(f"  Current: {current_temp}{unit_symbol} - {current_condition} - {current_windspeed}mph")
-        print(f"  Forecast (+{forecast1_hours}h): {forecast1_temp}{unit_symbol} - {forecast1_condition}")
-        print(f"  Forecast (+{forecast2_hours}h): {forecast2_temp}{unit_symbol} - {forecast2_condition}")
+        current_time_label = current.get('time_label', 'Now')
+        forecast1_time_label = forecast1.get('time_label', '')
+        forecast2_time_label = forecast2.get('time_label', '')
+
+        aqi_str = f"AQI: {current_aqi}" if current_aqi is not None else "AQI: N/A"
+        print(f"  Current ({current_time_label}): {current_temp}{unit_symbol} - {current_condition} - {current_windspeed}mph @ {current_wind_direction}° - {aqi_str}")
+        print(f"  Forecast ({forecast1_time_label}, +{forecast1_hours}h): {forecast1_temp}{unit_symbol} - {forecast1_condition}")
+        print(f"  Forecast ({forecast2_time_label}, +{forecast2_hours}h): {forecast2_temp}{unit_symbol} - {forecast2_condition}")
         print()
 
     # Render to ASCII

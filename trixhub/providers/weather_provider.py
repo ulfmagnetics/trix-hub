@@ -73,12 +73,12 @@ class WeatherProvider(DataProvider):
             requests.RequestException: If API call fails
         """
         try:
-            # Build API URL
-            base_url = "https://api.open-meteo.com/v1/forecast"
-            params = {
+            # Build weather API URL
+            weather_url = "https://api.open-meteo.com/v1/forecast"
+            weather_params = {
                 "latitude": self.latitude,
                 "longitude": self.longitude,
-                "current": "temperature_2m,weathercode,windspeed_10m",
+                "current": "temperature_2m,weathercode,windspeed_10m,winddirection_10m",
                 "hourly": "temperature_2m,weathercode",
                 "temperature_unit": self.units,
                 "windspeed_unit": "mph",
@@ -86,20 +86,48 @@ class WeatherProvider(DataProvider):
                 "timezone": "auto"
             }
 
-            # Fetch data
-            response = requests.get(base_url, params=params, timeout=10)
+            # Fetch weather data
+            response = requests.get(weather_url, params=weather_params, timeout=10)
             response.raise_for_status()
             data = response.json()
+
+            # Fetch AQI data if enabled
+            aqi_value = None
+            if self.config.get("aqi_enabled", True):
+                try:
+                    aqi_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+                    aqi_params = {
+                        "latitude": self.latitude,
+                        "longitude": self.longitude,
+                        "current": "us_aqi",
+                        "timezone": "auto"
+                    }
+                    aqi_response = requests.get(aqi_url, params=aqi_params, timeout=10)
+                    aqi_response.raise_for_status()
+                    aqi_data = aqi_response.json()
+                    aqi_value = int(round(aqi_data["current"]["us_aqi"]))
+                except (requests.RequestException, KeyError, ValueError, TypeError):
+                    # AQI is optional, don't fail if it's unavailable
+                    aqi_value = None
 
             # Parse current weather
             current_temp = int(round(data["current"]["temperature_2m"]))
             current_code = data["current"]["weathercode"]
             current_condition = self._map_weather_code(current_code)
             current_windspeed = int(round(data["current"]["windspeed_10m"]))
+            current_wind_direction = int(round(data["current"]["winddirection_10m"]))
 
             # Parse hourly forecast data
             hourly_temps = data["hourly"]["temperature_2m"]
             hourly_codes = data["hourly"]["weathercode"]
+
+            # Calculate time labels
+            now = datetime.now()
+            current_time_label = "Now"
+            forecast1_time = now + timedelta(hours=self.forecast_interval_hours)
+            forecast1_time_label = self._format_time_compact(forecast1_time)  # e.g., "3p"
+            forecast2_time = now + timedelta(hours=self.forecast_interval_hours * 2)
+            forecast2_time_label = self._format_time_compact(forecast2_time)  # e.g., "6p"
 
             # Get forecast for interval hours ahead (forecast 1)
             forecast1_index = min(self.forecast_interval_hours, len(hourly_temps) - 1)
@@ -123,17 +151,22 @@ class WeatherProvider(DataProvider):
                         "temperature": current_temp,
                         "condition": current_condition,
                         "windspeed": current_windspeed,
-                        "units": self.units
+                        "wind_direction": current_wind_direction,
+                        "units": self.units,
+                        "time_label": current_time_label,
+                        "aqi": aqi_value
                     },
                     "forecast1": {
                         "temperature": forecast1_temp,
                         "condition": forecast1_condition,
                         "hours_ahead": self.forecast_interval_hours,
+                        "time_label": forecast1_time_label
                     },
                     "forecast2": {
                         "temperature": forecast2_temp,
                         "condition": forecast2_condition,
                         "hours_ahead": self.forecast_interval_hours * 2,
+                        "time_label": forecast2_time_label
                     }
                 },
                 metadata={
@@ -169,6 +202,28 @@ class WeatherProvider(DataProvider):
             Condition name (sunny, cloudy, rainy, etc.)
         """
         return self.WEATHER_CONDITIONS.get(code, "cloudy")
+
+    def _format_time_compact(self, dt: datetime) -> str:
+        """
+        Format time in compact single-letter am/pm format.
+
+        Examples: "3p" for 3pm, "11p" for 11pm, "12a" for midnight
+
+        Args:
+            dt: Datetime to format
+
+        Returns:
+            Compact time string (e.g., "3p", "11p", "12a")
+        """
+        hour = dt.hour
+        if hour == 0:
+            return "12a"
+        elif hour < 12:
+            return f"{hour}a"
+        elif hour == 12:
+            return "12p"
+        else:
+            return f"{hour - 12}p"
 
     def get_cache_duration(self) -> timedelta:
         """
