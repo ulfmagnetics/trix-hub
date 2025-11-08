@@ -40,6 +40,9 @@ ENV/
 .env.local
 .env.*.local
 
+# Configuration (contains personal location data)
+config.json
+
 # Docker
 *.tar
 *.tar.gz

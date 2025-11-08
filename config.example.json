@@ -1,0 +1,20 @@
+{
+  "providers": {
+    "weather": {
+      "enabled": true,
+      "location": {
+        "latitude": 40.0,
+        "longitude": -80.0,
+        "name": "Pittsburgh, PA"
+      },
+      "units": "fahrenheit",
+      "forecast_hours": 3,
+      "cache_duration": 600
+    },
+    "time": {
+      "enabled": true,
+      "timezone": "America/New_York",
+      "format_12h": true
+    }
+  }
+}

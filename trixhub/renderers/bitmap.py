@@ -8,6 +8,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 from trixhub.providers.base import DisplayData
 from trixhub.renderers.base import Renderer
+from trixhub.renderers.weather_icons import draw_weather_icon
 from trixhub.utils.text_helpers import center_text, get_text_bbox
 
 
@@ -63,6 +64,8 @@ class BitmapRenderer(Renderer):
 
         if content_type == "time":
             return self._render_time(data)
+        elif content_type == "weather":
+            return self._render_weather(data)
         else:
             return self._render_error(f"Unknown type: {content_type}")
 
@@ -150,6 +153,82 @@ class BitmapRenderer(Renderer):
             date_x = content_right - date_width
             date_y = content_bottom - 10  # 10 pixels from bottom of content area
             draw.text((date_x, date_y), date_str, fill=(128, 128, 128), font=date_font)
+
+        return img
+
+    def _render_weather(self, data: DisplayData) -> Image.Image:
+        """
+        Render weather display.
+
+        Shows current and forecast weather in two-line format:
+        - Line 1: "72°F" + icon
+        - Separator line
+        - Line 2: "68°F" + icon
+
+        Args:
+            data: DisplayData with weather information
+
+        Returns:
+            Rendered PIL Image
+        """
+        # Create black background (no border/padding for weather)
+        img = Image.new('RGB', (self.width, self.height), color='black')
+        draw = ImageDraw.Draw(img)
+
+        # Check for error condition
+        if data.content.get("error"):
+            error_msg = data.content.get("error_message", "Weather API error 😢")
+
+            # Load font
+            if self.font_path:
+                font = ImageFont.truetype(self.font_path, 10)
+            else:
+                font = ImageFont.load_default()
+
+            # Draw error message centered
+            x, y = center_text(error_msg, font, self.width, self.height)
+            draw.text((x, y), error_msg, fill='red', font=font)
+
+            return img
+
+        # Load fonts
+        if self.font_path:
+            text_font = ImageFont.truetype(self.font_path, 12)
+        else:
+            text_font = ImageFont.load_default()
+
+        # Get weather data
+        current = data.content.get("current", {})
+        forecast = data.content.get("forecast", {})
+
+        current_temp = current.get("temperature", 0)
+        current_condition = current.get("condition", "cloudy")
+        current_units = current.get("units", "fahrenheit")
+
+        forecast_temp = forecast.get("temperature", 0)
+        forecast_condition = forecast.get("condition", "cloudy")
+
+        # Unit symbol
+        unit_symbol = "°F" if current_units == "fahrenheit" else "°C"
+
+        # Line 1: Current weather (y=2)
+        current_text = f"{current_temp}{unit_symbol}"
+        draw.text((2, 2), current_text, fill='white', font=text_font)
+
+        # Current weather icon (12x12 at x=48)
+        current_icon = draw_weather_icon(current_condition)
+        img.paste(current_icon, (48, 2))
+
+        # Separator line (y=15)
+        draw.line([(2, 15), (self.width - 3, 15)], fill=(128, 128, 128), width=1)
+
+        # Line 2: Forecast weather (y=18)
+        forecast_text = f"{forecast_temp}{unit_symbol}"
+        draw.text((2, 18), forecast_text, fill='white', font=text_font)
+
+        # Forecast weather icon (12x12 at x=48)
+        forecast_icon = draw_weather_icon(forecast_condition)
+        img.paste(forecast_icon, (48, 18))
 
         return img
 

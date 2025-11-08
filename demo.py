@@ -8,7 +8,7 @@ Shows how to use both ASCII (terminal testing) and Bitmap (Matrix Portal) render
 
 import sys
 import time
-from trixhub.providers import TimeProvider
+from trixhub.providers import TimeProvider, WeatherProvider
 from trixhub.renderers import BitmapRenderer, ASCIIRenderer
 from trixhub.client import MatrixClient
 
@@ -198,6 +198,73 @@ def demo_live_updates():
         print("\n\nStopped by user")
 
 
+def demo_weather():
+    """
+    Demo weather provider with ASCII and bitmap renderers.
+
+    Shows current weather and forecast using Open-Meteo API.
+    """
+    print("=" * 64)
+    print("Weather Provider Demo")
+    print("=" * 64)
+    print()
+
+    # Create provider and renderers
+    provider = WeatherProvider()
+    ascii_renderer = ASCIIRenderer(width=64, height=32)
+    bitmap_renderer = BitmapRenderer(width=64, height=32)
+
+    # Get data
+    print("Fetching weather data...")
+    data = provider.get_data()
+    print()
+
+    # Show data structure
+    if data.content.get('error'):
+        print(f"Error: {data.content.get('error_message')}")
+        print()
+    else:
+        print("Weather data received:")
+        print(f"  Location: {data.content.get('location')}")
+
+        current = data.content.get('current', {})
+        forecast = data.content.get('forecast', {})
+
+        current_temp = current.get('temperature')
+        current_condition = current.get('condition')
+        current_units = current.get('units', 'fahrenheit')
+
+        forecast_temp = forecast.get('temperature')
+        forecast_condition = forecast.get('condition')
+        forecast_hours = forecast.get('hours_ahead', 3)
+
+        unit_symbol = '°F' if current_units == 'fahrenheit' else '°C'
+
+        print(f"  Current: {current_temp}{unit_symbol} - {current_condition}")
+        print(f"  Forecast (+{forecast_hours}h): {forecast_temp}{unit_symbol} - {forecast_condition}")
+        print()
+
+    # Render to ASCII
+    print("ASCII Rendering:")
+    ascii_output = ascii_renderer.render(data)
+    print(ascii_output)
+    print()
+
+    # Render to bitmap
+    print("Bitmap Rendering:")
+    bitmap = bitmap_renderer.render(data)
+    print(f"  Created {bitmap.size} bitmap")
+
+    # Save bitmap
+    client = MatrixClient("http://trix-server.local/bitmap")
+    success = client.post_bitmap(bitmap)
+    if success:
+        print("  ✓ Bitmap saved successfully")
+    else:
+        print("  ✗ Failed to save bitmap")
+    print()
+
+
 def main():
     """Run all demos"""
 
@@ -210,6 +277,7 @@ def main():
             "caching": demo_caching,
             "multiple": demo_multiple_renderers,
             "live": demo_live_updates,
+            "weather": demo_weather,
         }
 
         if demo_name in demos:
@@ -235,6 +303,7 @@ def main():
         print("  python demo.py caching")
         print("  python demo.py multiple")
         print("  python demo.py live")
+        print("  python demo.py weather")
         print()
 
 
