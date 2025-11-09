@@ -25,8 +25,8 @@ services:
       - TZ=America/New_York
 
     # Network mode (host network gives access to local network services)
-    # Use 'bridge' for more isolation, 'host' for easier local network access
-    network_mode: bridge
+    # 'host' mode required for accessing trix-server on local network via .local hostnames
+    network_mode: host
 
     # Logging configuration
     logging:
