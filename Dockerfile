@@ -33,6 +33,9 @@ COPY trixhub/ /app/trixhub/
 # Copy application code
 COPY app.py .
 
+# Copy configuration
+COPY config.json .
+
 # Create non-root user for security
 RUN useradd -m -u 1000 trixhub && \
     chown -R trixhub:trixhub /app && \

@@ -40,7 +40,11 @@ class SimpleRotationScheduler:
 
         # Load configurations
         self.matrix_config = self.config.get_matrix_config()
+        if self.debug:
+            print(f"matrix config: {self.matrix_config}")
         self.scheduler_config = self.config.get_scheduler_config()
+        if self.debug:
+            print(f"scheduler config: {self.scheduler_config}")
 
         # Initialize client and renderers based on debug mode
         if self.debug:

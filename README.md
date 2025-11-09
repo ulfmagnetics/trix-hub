@@ -88,6 +88,25 @@ See [demo.py](demo.py) for more examples.
 
 ## Deployment
 
+### Prerequisites
+
+Before building the Docker image, you must create a `config.json` file from the example template:
+
+```bash
+# Copy the example configuration
+cp config.example.json config.json
+
+# Edit with your settings (location, timezone, etc.)
+nano config.json  # or use your preferred editor
+```
+
+The `config.json` file is required and contains:
+- Matrix server URL and display dimensions
+- Scheduler configuration and provider rotation
+- Provider-specific settings (weather location, timezone, etc.)
+
+**Note:** `config.json` is gitignored because it contains personal location data. Make sure to create it before building.
+
 ### Quick Deploy with NPM Scripts
 
 The easiest way to deploy trix-hub is using the npm scripts:
