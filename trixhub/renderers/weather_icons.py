@@ -28,6 +28,11 @@ def draw_weather_icon(condition: str, size: int = 12) -> Image.Image:
         "thunderstorm": draw_thunderstorm_icon,
         "windy": draw_windy_icon,
         "error": draw_error_icon,
+        "moon": draw_moon_icon,
+        "new_moon": draw_new_moon_icon,
+        "waxing_moon": draw_waxing_moon_icon,
+        "full_moon": draw_full_moon_icon,
+        "waning_moon": draw_waning_moon_icon,
     }
 
     renderer = icon_renderers.get(condition, draw_cloudy_icon)
@@ -259,5 +264,92 @@ def draw_error_icon(size: int = 12) -> Image.Image:
         # Red X
         draw.line([2, 2, 10, 10], fill=error_color, width=2)
         draw.line([10, 2, 2, 10], fill=error_color, width=2)
+
+    return img
+
+
+def draw_moon_icon(size: int = 12) -> Image.Image:
+    """Draw generic moon icon (pale yellow crescent)."""
+    return draw_waxing_moon_icon(size)
+
+
+def draw_new_moon_icon(size: int = 12) -> Image.Image:
+    """Draw new moon icon (dark circle with faint outline)."""
+    img = Image.new('RGB', (size, size), color='black')
+    draw = ImageDraw.Draw(img)
+
+    moon_color = (60, 60, 70)  # Very dark gray with slight blue tint
+
+    if size == 14:
+        # Small dark circle
+        draw.ellipse([4, 4, 10, 10], fill=moon_color)
+    else:  # 12x12
+        # Small dark circle
+        draw.ellipse([3, 3, 9, 9], fill=moon_color)
+
+    return img
+
+
+def draw_waxing_moon_icon(size: int = 12) -> Image.Image:
+    """Draw waxing crescent/quarter moon (right side illuminated)."""
+    img = Image.new('RGB', (size, size), color='black')
+    draw = ImageDraw.Draw(img)
+
+    moon_color = (230, 230, 180)  # Pale yellow
+
+    if size == 14:
+        # Draw full circle first
+        draw.ellipse([3, 3, 11, 11], fill=moon_color)
+        # Cover left side with black arc for crescent
+        draw.ellipse([1, 3, 8, 11], fill='black')
+    else:  # 12x12
+        # Draw full circle first
+        draw.ellipse([2, 2, 10, 10], fill=moon_color)
+        # Cover left side with black arc for crescent
+        draw.ellipse([0, 2, 7, 10], fill='black')
+
+    return img
+
+
+def draw_full_moon_icon(size: int = 12) -> Image.Image:
+    """Draw full moon icon (pale yellow circle)."""
+    img = Image.new('RGB', (size, size), color='black')
+    draw = ImageDraw.Draw(img)
+
+    moon_color = (240, 240, 200)  # Pale yellow-white
+
+    if size == 14:
+        # Full circle
+        draw.ellipse([3, 3, 11, 11], fill=moon_color)
+        # Add some darker "maria" spots
+        draw.ellipse([5, 4, 7, 6], fill=(200, 200, 160))
+        draw.ellipse([7, 7, 9, 9], fill=(200, 200, 160))
+    else:  # 12x12
+        # Full circle
+        draw.ellipse([2, 2, 10, 10], fill=moon_color)
+        # Add some darker "maria" spots
+        draw.ellipse([4, 3, 6, 5], fill=(200, 200, 160))
+        draw.ellipse([6, 6, 8, 8], fill=(200, 200, 160))
+
+    return img
+
+
+def draw_waning_moon_icon(size: int = 12) -> Image.Image:
+    """Draw waning crescent/quarter moon (left side illuminated)."""
+    img = Image.new('RGB', (size, size), color='black')
+    draw = ImageDraw.Draw(img)
+
+    moon_color = (230, 230, 180)  # Pale yellow
+
+    if size == 14:
+        # Draw full circle first
+        draw.ellipse([3, 3, 11, 11], fill=moon_color)
+        # Cover right side with black arc for crescent
+        draw.ellipse([6, 3, 13, 11], fill='black')
+    else:  # 12x12
+        # Draw full circle first
+        draw.ellipse([2, 2, 10, 10], fill=moon_color)
+        # Cover right side with black arc for crescent
+        draw.ellipse([5, 2, 12, 10], fill='black')
 
     return img

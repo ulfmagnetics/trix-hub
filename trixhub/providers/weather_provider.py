@@ -7,6 +7,7 @@ Fetches current weather and short-term forecast for configured location.
 from datetime import datetime, timedelta
 from typing import Dict, Any
 import requests
+import math
 
 from .base import DataProvider, DisplayData
 from ..config import get_config
@@ -80,6 +81,7 @@ class WeatherProvider(DataProvider):
                 "longitude": self.longitude,
                 "current": "temperature_2m,weathercode,windspeed_10m,winddirection_10m",
                 "hourly": "temperature_2m,weathercode",
+                "daily": "sunrise,sunset",
                 "temperature_unit": self.units,
                 "windspeed_unit": "mph",
                 "forecast_days": 1,
@@ -90,6 +92,16 @@ class WeatherProvider(DataProvider):
             response = requests.get(weather_url, params=weather_params, timeout=10)
             response.raise_for_status()
             data = response.json()
+
+            # Parse sunrise/sunset times
+            sunrise_str = data["daily"]["sunrise"][0]
+            sunset_str = data["daily"]["sunset"][0]
+            sunrise = datetime.fromisoformat(sunrise_str.replace('Z', '+00:00'))
+            sunset = datetime.fromisoformat(sunset_str.replace('Z', '+00:00'))
+
+            # Check if it's currently nighttime
+            now = datetime.now(sunrise.tzinfo)
+            is_night = now < sunrise or now > sunset
 
             # Fetch AQI data if enabled
             aqi_value = None
@@ -110,10 +122,15 @@ class WeatherProvider(DataProvider):
                     # AQI is optional, don't fail if it's unavailable
                     aqi_value = None
 
+            # Calculate moon phase if it's nighttime
+            moon_phase = None
+            if is_night:
+                moon_phase = self._calculate_moon_phase(now)
+
             # Parse current weather
             current_temp = int(round(data["current"]["temperature_2m"]))
             current_code = data["current"]["weathercode"]
-            current_condition = self._map_weather_code(current_code)
+            current_condition = self._map_weather_code(current_code, is_night, moon_phase)
             current_windspeed = int(round(data["current"]["windspeed_10m"]))
             current_wind_direction = int(round(data["current"]["winddirection_10m"]))
 
@@ -133,13 +150,13 @@ class WeatherProvider(DataProvider):
             forecast1_index = min(self.forecast_interval_hours, len(hourly_temps) - 1)
             forecast1_temp = int(round(hourly_temps[forecast1_index]))
             forecast1_code = hourly_codes[forecast1_index]
-            forecast1_condition = self._map_weather_code(forecast1_code)
+            forecast1_condition = self._map_weather_code(forecast1_code, is_night, moon_phase)
 
             # Get forecast for 2*interval hours ahead (forecast 2)
             forecast2_index = min(self.forecast_interval_hours * 2, len(hourly_temps) - 1)
             forecast2_temp = int(round(hourly_temps[forecast2_index]))
             forecast2_code = hourly_codes[forecast2_index]
-            forecast2_condition = self._map_weather_code(forecast2_code)
+            forecast2_condition = self._map_weather_code(forecast2_code, is_night, moon_phase)
 
             # Build DisplayData
             return DisplayData(
@@ -191,17 +208,66 @@ class WeatherProvider(DataProvider):
                 }
             )
 
-    def _map_weather_code(self, code: int) -> str:
+    def _map_weather_code(self, code: int, is_night: bool = False, moon_phase: float = None) -> str:
         """
         Map Open-Meteo weather code to internal condition name.
 
         Args:
             code: WMO weather code
+            is_night: Whether it's currently nighttime
+            moon_phase: Moon phase (0-1, where 0=new, 0.5=full) if nighttime
 
         Returns:
             Condition name (sunny, cloudy, rainy, etc.)
         """
-        return self.WEATHER_CONDITIONS.get(code, "cloudy")
+        condition = self.WEATHER_CONDITIONS.get(code, "cloudy")
+
+        # Replace sunny/clear with moon icon at night
+        if is_night and condition == "sunny":
+            # Use moon phase to determine icon
+            if moon_phase is not None:
+                if moon_phase < 0.1 or moon_phase > 0.9:
+                    return "new_moon"  # New moon
+                elif 0.4 <= moon_phase <= 0.6:
+                    return "full_moon"  # Full moon
+                elif moon_phase < 0.5:
+                    return "waxing_moon"  # Waxing (crescent/first quarter)
+                else:
+                    return "waning_moon"  # Waning (last quarter/crescent)
+            return "moon"  # Default moon if phase unknown
+
+        return condition
+
+    def _calculate_moon_phase(self, dt: datetime) -> float:
+        """
+        Calculate moon phase for a given datetime.
+
+        Uses a simple astronomical algorithm based on the lunar cycle.
+
+        Args:
+            dt: Datetime to calculate phase for
+
+        Returns:
+            Moon phase as a value from 0 to 1:
+            - 0.00 = New Moon
+            - 0.25 = First Quarter (waxing)
+            - 0.50 = Full Moon
+            - 0.75 = Last Quarter (waning)
+            - 1.00 = New Moon (next cycle)
+        """
+        # Known new moon: January 6, 2000, 18:14 UTC
+        known_new_moon = datetime(2000, 1, 6, 18, 14)
+
+        # Lunar cycle is approximately 29.53058867 days
+        lunar_cycle = 29.53058867
+
+        # Calculate days since known new moon
+        days_since = (dt - known_new_moon).total_seconds() / 86400
+
+        # Calculate phase (0 to 1)
+        phase = (days_since % lunar_cycle) / lunar_cycle
+
+        return phase
 
     def _format_time_compact(self, dt: datetime) -> str:
         """
