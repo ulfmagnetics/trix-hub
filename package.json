@@ -21,7 +21,8 @@
     "test:bitmap": "docker compose run --rm trix-hub python demo.py bitmap",
     "test:caching": "docker compose run --rm trix-hub python demo.py caching",
     "test:multiple": "docker compose run --rm trix-hub python demo.py multiple",
-    "test:rebuild": "npm run build && npm run test"
+    "test:rebuild": "npm run build && npm run test",
+    "test:weather": "docker compose run --rm trix-hub python demo.py weather"
   },
   "keywords": [],
   "author": "John Berry (ulfmagnetics@gmail.com)",

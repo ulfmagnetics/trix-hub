@@ -12,7 +12,10 @@ services:
     # Environment variables
     environment:
       # trix-server connection (MatrixPortal M4)
-      - TRIX_SERVER_URL=http://192.168.1.XX:80/bitmap
+      - TRIX_SERVER_URL=http://trix-server.local/bitmap
+      # IP address for trix-server.local (optional - enables /etc/hosts entry)
+      # Set this to your MatrixPortal M4's IP address
+      - TRIX_SERVER_IP=192.168.1.40
 
       # Display configuration
       - MATRIX_WIDTH=64

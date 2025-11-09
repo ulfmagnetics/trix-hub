@@ -36,6 +36,10 @@ COPY app.py .
 # Copy configuration
 COPY config.json .
 
+# Copy entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Create non-root user for security
 RUN useradd -m -u 1000 trixhub && \
     chown -R trixhub:trixhub /app && \
@@ -45,9 +49,6 @@ RUN useradd -m -u 1000 trixhub && \
 # Add /app to PYTHONPATH so trixhub package can be imported
 ENV PYTHONPATH=/app
 
-# Switch to non-root user
-USER trixhub
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
@@ -55,5 +56,8 @@ ENV PYTHONUNBUFFERED=1
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "print('healthy')" || exit 1
 
-# Run the application
+# Set entrypoint to handle /etc/hosts configuration and user switching
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Run the application (will be executed by entrypoint as trixhub user)
 CMD ["python", "app.py"]

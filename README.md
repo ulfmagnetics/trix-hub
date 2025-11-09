@@ -202,7 +202,15 @@ docker compose -f docker-compose.prod.yml down
 ### Configuration
 
 Edit [docker-compose.prod.yml](docker-compose.prod.yml) (or [docker-compose.yml](docker-compose.yml) for development) to configure:
-- `TRIX_SERVER_URL`: URL of your trix-server endpoint
+
+**Network Settings:**
+- `TRIX_SERVER_URL`: URL of your trix-server endpoint (e.g., `http://192.168.1.XX/display`)
+- `TRIX_SERVER_IP`: IP address of your MatrixPortal M4 (optional but recommended)
+  - When set, creates `/etc/hosts` entry mapping `trix-server.local` to this IP
+  - Enables reliable hostname resolution even when mDNS fails
+  - Example: `192.168.1.40`
+
+**Display Settings:**
 - `MATRIX_WIDTH` / `MATRIX_HEIGHT`: Display dimensions (default: 64x32)
 - `UPDATE_INTERVAL`: How often to refresh data (seconds)
 - `TZ`: Timezone for time-based displays
