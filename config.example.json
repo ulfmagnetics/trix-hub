@@ -1,4 +1,24 @@
 {
+  "matrix": {
+    "server_url": "http://trix-server.local/display",
+    "width": 64,
+    "height": 32,
+    "output_dir": "output"
+  },
+  "scheduler": {
+    "mode": "simple_rotation",
+    "default_display_duration": 30,
+    "provider_rotation": [
+      {
+        "name": "time",
+        "duration": 10
+      },
+      {
+        "name": "weather",
+        "duration": 30
+      }
+    ]
+  },
   "providers": {
     "weather": {
       "enabled": true,

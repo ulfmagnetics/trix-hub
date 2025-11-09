@@ -103,6 +103,33 @@ class Config:
         """
         return self.get("providers", provider_name, default={})
 
+    def get_matrix_config(self) -> Dict[str, Any]:
+        """
+        Get Matrix Portal configuration.
+
+        Returns:
+            Matrix configuration dictionary with server_url, width, height, output_dir
+        """
+        return self.get("matrix", default={
+            "server_url": "http://trix-server.local/display",
+            "width": 64,
+            "height": 32,
+            "output_dir": "output"
+        })
+
+    def get_scheduler_config(self) -> Dict[str, Any]:
+        """
+        Get scheduler configuration.
+
+        Returns:
+            Scheduler configuration dictionary with mode, default_display_duration, provider_rotation
+        """
+        return self.get("scheduler", default={
+            "mode": "simple_rotation",
+            "default_display_duration": 30,
+            "provider_rotation": []
+        })
+
 
 # Global config instance
 _config = None
