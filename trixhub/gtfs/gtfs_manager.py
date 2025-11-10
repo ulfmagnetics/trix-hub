@@ -13,7 +13,18 @@ from datetime import datetime, timedelta, time as dt_time
 from typing import List, Dict, Any, Optional
 import requests
 from google.transit import gtfs_realtime_pb2
-import gtfs_kit as gk
+
+# Lazy import gtfs_kit - only loaded when actually parsing GTFS data
+# This defers ~26s import cost until first bus data fetch
+_gtfs_kit = None
+
+def _get_gtfs_kit():
+    """Lazy load gtfs_kit only when needed."""
+    global _gtfs_kit
+    if _gtfs_kit is None:
+        import gtfs_kit as gk
+        _gtfs_kit = gk
+    return _gtfs_kit
 
 
 class GTFSManager:
@@ -70,7 +81,7 @@ class GTFSManager:
         print(f"[GTFSManager] Downloaded GTFS static data ({len(response.content)} bytes)")
         return zip_path
 
-    def _load_static_feed(self, force_refresh: bool = False) -> gk.Feed:
+    def _load_static_feed(self, force_refresh: bool = False):
         """
         Load GTFS static feed into memory.
 
@@ -104,8 +115,9 @@ class GTFSManager:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extract_dir)
 
-        # Load with GTFSKit
+        # Load with GTFSKit (lazy import here)
         print("[GTFSManager] Loading GTFS data with GTFSKit...")
+        gk = _get_gtfs_kit()
         self.feed = gk.read_feed(extract_dir, dist_units='km')
         self.last_static_update = datetime.now()
 
