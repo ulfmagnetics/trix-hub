@@ -7,7 +7,12 @@ Pillow>=10.0.0
 # HTTP requests for communicating with trix-server
 requests>=2.31.0
 
+# GTFS and GTFS-Realtime support for transit data
+gtfs-realtime-bindings>=1.0.0
+protobuf>=4.0.0
+gtfs-kit>=6.0.0
+
 # Future dependencies to be added:
 # - Scheduling library (APScheduler, etc.)
 # - Web framework (Flask/FastAPI for config UI)
-# - Data source integrations (weather API, calendar, etc.)
+# - Data source integrations (calendar, etc.)

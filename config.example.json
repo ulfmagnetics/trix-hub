@@ -16,6 +16,10 @@
       {
         "name": "weather",
         "duration": 30
+      },
+      {
+        "name": "bus_7734",
+        "duration": 20
       }
     ]
   },
@@ -36,6 +40,16 @@
       "enabled": true,
       "timezone": "America/New_York",
       "format_12h": true
+    },
+    "bus_7734": {
+      "enabled": true,
+      "stop_id": "7734",
+      "priority_routes": ["67"],
+      "gtfs_static_url": "https://www.rideprt.org/GTFS/google_transit.zip",
+      "gtfs_realtime_url": "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates",
+      "max_arrivals": 4,
+      "window_minutes": 60,
+      "cache_duration": 30
     }
-  }
+   }
 }

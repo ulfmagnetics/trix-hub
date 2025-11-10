@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 from trixhub.config import get_config
-from trixhub.providers import TimeProvider, WeatherProvider, DataProvider
+from trixhub.providers import TimeProvider, WeatherProvider, BusArrivalProvider, DataProvider
 from trixhub.renderers import BitmapRenderer, ASCIIRenderer
 from trixhub.client import MatrixClient
 
@@ -79,7 +79,7 @@ class SimpleRotationScheduler:
 
     def _init_providers(self):
         """Initialize all configured providers."""
-        # Map of provider names to classes
+        # Map of base provider names to classes
         provider_classes = {
             "time": TimeProvider,
             "weather": WeatherProvider,
@@ -97,15 +97,21 @@ class SimpleRotationScheduler:
                 print(f"[Scheduler] Warning: Provider '{provider_name}' is in rotation but disabled in config")
                 continue
 
-            # Initialize provider if we have a class for it
-            if provider_name in provider_classes:
-                try:
+            # Initialize provider
+            try:
+                # Check for exact match first
+                if provider_name in provider_classes:
                     self.providers[provider_name] = provider_classes[provider_name]()
                     print(f"[Scheduler] Initialized provider: {provider_name}")
-                except Exception as e:
-                    print(f"[Scheduler] Error initializing provider '{provider_name}': {e}")
-            else:
-                print(f"[Scheduler] Warning: Unknown provider '{provider_name}' in rotation")
+                # Check if it's a bus provider (name starts with "bus_")
+                elif provider_name.startswith("bus_"):
+                    # Bus providers use their specific config section
+                    self.providers[provider_name] = BusArrivalProvider(config_key=provider_name)
+                    print(f"[Scheduler] Initialized bus provider: {provider_name}")
+                else:
+                    print(f"[Scheduler] Warning: Unknown provider '{provider_name}' in rotation")
+            except Exception as e:
+                print(f"[Scheduler] Error initializing provider '{provider_name}': {e}")
 
     def _get_display_duration(self, provider_name: str, data: Any) -> int:
         """

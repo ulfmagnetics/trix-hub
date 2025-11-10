@@ -66,6 +66,8 @@ class BitmapRenderer(Renderer):
             return self._render_time(data)
         elif content_type == "weather":
             return self._render_weather(data)
+        elif content_type == "bus_arrivals":
+            return self._render_bus_arrivals(data)
         else:
             return self._render_error(f"Unknown type: {content_type}")
 
@@ -321,6 +323,110 @@ class BitmapRenderer(Renderer):
         wind_width = draw.textlength(wind_text, font=text_font)
         wind_x = self.width - wind_width - 2
         draw.text((wind_x, text_y), wind_text, fill='white', font=text_font)
+
+        return img
+
+    def _render_bus_arrivals(self, data: DisplayData) -> Image.Image:
+        """
+        Render bus arrivals display.
+
+        Layout:
+        - 4 rows of arrivals (8 pixels each = 32 total)
+        - Format: "67 IB 5 mins TT"
+        - Color-coded by urgency:
+          - Red: <5 minutes (urgent)
+          - Yellow: 5-10 minutes (soon)
+          - Green: 10+ minutes (normal)
+
+        Args:
+            data: DisplayData with bus arrival information
+
+        Returns:
+            Rendered PIL Image
+        """
+        # Create black background
+        img = Image.new('RGB', (self.width, self.height), color='black')
+        draw = ImageDraw.Draw(img)
+
+        # Check for error condition
+        if data.content.get("error"):
+            error_msg = data.content.get("error_message", "Bus data error")
+
+            # Load font
+            if self.font_path:
+                font = ImageFont.truetype(self.font_path, 8)
+            else:
+                font = ImageFont.load_default()
+
+            # Draw error message centered
+            x, y = center_text(error_msg, font, self.width, self.height)
+            draw.text((x, y), error_msg, fill='red', font=font)
+
+            return img
+
+        # Load font (size 8 for compact display)
+        if self.font_path:
+            font = ImageFont.truetype(self.font_path, 8)
+        else:
+            font = ImageFont.load_default()
+
+        # Get arrivals
+        arrivals = data.content.get("arrivals", [])
+
+        # Define urgency colors
+        urgency_colors = {
+            'urgent': (255, 0, 0),      # Red (<5 mins)
+            'soon': (255, 255, 0),      # Yellow (5-10 mins)
+            'normal': (0, 255, 0),      # Green (10+ mins)
+        }
+
+        # Render each arrival (max 4 rows)
+        y_offset = 0
+        line_height = 8
+
+        for i, arrival in enumerate(arrivals[:4]):  # Max 4 arrivals
+            # Extract data
+            route = arrival.get('route_short_name', '??')
+            direction = arrival.get('direction', '')
+            minutes = arrival.get('minutes_until', 0)
+            arrival_type = arrival.get('type', 'SC')  # TT or SC
+            urgency = arrival.get('urgency', 'normal')
+
+            # Get color based on urgency
+            color = urgency_colors.get(urgency, (255, 255, 255))
+
+            # Format: "67 IB 5 mins TT"
+            # Build text components
+            route_dir = f"{route} {direction}".strip()
+
+            # Format minutes
+            if minutes == 0:
+                time_text = "NOW"
+            elif minutes == 1:
+                time_text = "1 min"
+            else:
+                time_text = f"{minutes} mins"
+
+            # Build full line
+            # Layout: "67 IB" on left, "5 mins TT" on right
+            left_text = route_dir
+            right_text = f"{time_text} {arrival_type}"
+
+            # Draw left text (route + direction)
+            draw.text((2, y_offset), left_text, fill=color, font=font)
+
+            # Draw right text (time + type) - right-aligned
+            right_width = draw.textlength(right_text, font=font)
+            right_x = self.width - right_width - 2
+            draw.text((right_x, y_offset), right_text, fill=color, font=font)
+
+            y_offset += line_height
+
+        # If no arrivals, show message
+        if not arrivals:
+            no_arrivals_msg = "No arrivals"
+            x, y = center_text(no_arrivals_msg, font, self.width, self.height)
+            draw.text((x, y), no_arrivals_msg, fill='white', font=font)
 
         return img
 
