@@ -40,6 +40,10 @@ COPY config.json .
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# Set timezone to America/New_York (EST/EDT)
+RUN ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime && \
+    echo "America/New_York" > /etc/timezone
+
 # Create non-root user for security
 RUN useradd -m -u 1000 trixhub && \
     chown -R trixhub:trixhub /app && \
