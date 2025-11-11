@@ -5,6 +5,9 @@
     "height": 32,
     "output_dir": "output"
   },
+
+  "_comment_scheduler": "Two scheduler modes are available: simple_rotation and time_windowed_rotation",
+
   "scheduler": {
     "mode": "simple_rotation",
     "default_display_duration": 30,
@@ -23,6 +26,75 @@
       }
     ]
   },
+
+  "_comment_time_windowed": "Example time-windowed rotation configuration (replace scheduler section above)",
+  "_scheduler_time_windowed_example": {
+    "mode": "time_windowed_rotation",
+    "default_display_duration": 30,
+    "timezone": "America/New_York",
+    "rotations": [
+      {
+        "name": "morning",
+        "time_window": {
+          "start": "06:00",
+          "end": "08:00"
+        },
+        "providers": [
+          {"name": "time", "duration": 10},
+          {"name": "weather", "duration": 20},
+          {"name": "bus_7637", "duration": 15},
+          {"name": "bus_8475", "duration": 15}
+        ]
+      },
+      {
+        "name": "blank_day",
+        "time_window": {
+          "start": "08:00",
+          "end": "15:00"
+        },
+        "blank_screen": true
+      },
+      {
+        "name": "afternoon",
+        "time_window": {
+          "start": "15:00",
+          "end": "17:00"
+        },
+        "providers": [
+          {"name": "bus_7637", "duration": 15},
+          {"name": "bus_8475", "duration": 15},
+          {"name": "weather", "duration": 10}
+        ]
+      },
+      {
+        "name": "evening",
+        "time_window": {
+          "start": "17:00",
+          "end": "21:00"
+        },
+        "providers": [
+          {"name": "time", "duration": 5},
+          {"name": "weather", "duration": 15},
+          {"name": "bus_7637", "duration": 10},
+          {"name": "bus_8475", "duration": 10}
+        ]
+      },
+      {
+        "name": "overnight",
+        "time_window": {
+          "start": "21:00",
+          "end": "06:00"
+        },
+        "blank_screen": true
+      }
+    ],
+    "fallback_rotation": {
+      "providers": [
+        {"name": "time", "duration": 30}
+      ]
+    }
+  },
+
   "providers": {
     "weather": {
       "enabled": true,
@@ -45,6 +117,28 @@
       "enabled": true,
       "stop_id": "7734",
       "priority_routes": ["67"],
+      "gtfs_static_url": "https://www.rideprt.org/GTFS/google_transit.zip",
+      "gtfs_realtime_url": "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates",
+      "max_arrivals": 4,
+      "window_minutes": 60,
+      "cache_duration": 30,
+      "gtfs_cache_days": 30
+    },
+    "bus_7637": {
+      "enabled": true,
+      "stop_id": "7637",
+      "priority_routes": ["67", "69"],
+      "gtfs_static_url": "https://www.rideprt.org/GTFS/google_transit.zip",
+      "gtfs_realtime_url": "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates",
+      "max_arrivals": 4,
+      "window_minutes": 60,
+      "cache_duration": 30,
+      "gtfs_cache_days": 30
+    },
+    "bus_8475": {
+      "enabled": true,
+      "stop_id": "8475",
+      "priority_routes": ["67", "69"],
       "gtfs_static_url": "https://www.rideprt.org/GTFS/google_transit.zip",
       "gtfs_realtime_url": "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates",
       "max_arrivals": 4,
