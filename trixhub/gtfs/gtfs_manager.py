@@ -495,7 +495,35 @@ class GTFSManager:
             minutes = int((arrival['arrival_time'] - now).total_seconds() / 60)
             arrival['minutes_until'] = max(0, minutes)  # Don't show negative
 
-        return merged
+        # Deduplicate arrivals with same route/direction/time
+        # (e.g., multiple trip_ids for the same service)
+        # Keep TT (realtime) over SC (scheduled) when both exist
+        seen = {}
+        deduplicated = []
+
+        for arrival in merged:
+            # Create key: (route, direction, minutes)
+            key = (
+                arrival['route_short_name'],
+                arrival.get('direction', ''),
+                arrival['minutes_until']
+            )
+
+            if key not in seen:
+                # First time seeing this route/direction/time
+                seen[key] = arrival
+                deduplicated.append(arrival)
+            else:
+                # Duplicate found - prefer TT over SC
+                existing = seen[key]
+                if arrival['type'] == 'TT' and existing['type'] == 'SC':
+                    # Replace SC with TT
+                    deduplicated.remove(existing)
+                    deduplicated.append(arrival)
+                    seen[key] = arrival
+                # Otherwise keep the first one (already in list)
+
+        return deduplicated
 
     def _get_trip_info(self, trip_id: str) -> Dict[str, str]:
         """
