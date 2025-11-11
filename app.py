@@ -238,14 +238,14 @@ class SimpleRotationScheduler:
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def signal_handler(*_args):
-    """Handle shutdown signals."""
-    # Access the global scheduler instance
-    if 'scheduler' in globals():
-        scheduler.shutdown()
-    else:
-        print("\nShutdown requested")
-        sys.exit(0)
+def signal_handler(signum, frame):
+    """Handle shutdown signals - exit immediately."""
+    print()
+    print("=" * 70)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Shutdown requested...")
+    print("=" * 70)
+    # Exit immediately - don't wait for graceful shutdown
+    sys.exit(0)
 
 
 def main():

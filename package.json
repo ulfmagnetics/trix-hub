@@ -16,6 +16,7 @@
     "logs": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml logs -f'",
     "status": "ssh rpi5-streamer.local 'docker compose -f ~/trix-hub/docker-compose.prod.yml ps'",
     "clean": "rm -f trix-hub.tar.gz",
+    "debug": "docker compose run --rm --entrypoint python trix-hub app.py --debug",
     "test": "docker compose run --rm trix-hub python demo.py",
     "test:ascii": "docker compose run --rm trix-hub python demo.py ascii",
     "test:bitmap": "docker compose run --rm trix-hub python demo.py bitmap",
