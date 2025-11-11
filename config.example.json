@@ -49,7 +49,8 @@
       "gtfs_realtime_url": "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates",
       "max_arrivals": 4,
       "window_minutes": 60,
-      "cache_duration": 30
+      "cache_duration": 30,
+      "gtfs_cache_days": 30
     }
    }
 }

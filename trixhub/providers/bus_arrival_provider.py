@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from .base import DataProvider, DisplayData
 from ..config import get_config
-from ..gtfs import GTFSManager
+from ..gtfs import get_gtfs_manager
 
 
 class BusArrivalProvider(DataProvider):
@@ -61,10 +61,15 @@ class BusArrivalProvider(DataProvider):
             "https://realtime.portauthority.org/bustime/gtfs-rt/tripupdates"
         )
 
-        # Initialize GTFS manager
-        self.gtfs_manager = GTFSManager(
+        # Get cache configuration
+        cache_days = config.get("gtfs_cache_days", 30)
+
+        # Get or create singleton GTFS manager
+        # Multiple providers with the same GTFS feeds will share the same manager
+        self.gtfs_manager = get_gtfs_manager(
             static_url=self.gtfs_static_url,
-            realtime_url=self.gtfs_realtime_url
+            realtime_url=self.gtfs_realtime_url,
+            cache_days=cache_days
         )
 
         # Config
@@ -94,6 +99,19 @@ class BusArrivalProvider(DataProvider):
             # Add urgency level for color coding
             for arrival in arrivals:
                 arrival['urgency'] = self._calculate_urgency(arrival['minutes_until'])
+
+            # Debug output - print arrivals to console
+            print(f"[BusArrivalProvider] Stop {self.stop_id} - {len(arrivals)} arrivals:")
+            for i, arrival in enumerate(arrivals, 1):
+                urgency_emoji = {
+                    'urgent': '🔴',  # Red
+                    'soon': '🟡',    # Yellow
+                    'normal': '🟢'   # Green
+                }.get(arrival['urgency'], '⚪')
+
+                print(f"  {i}. {arrival['route_short_name']:>4} "
+                      f"{arrival['minutes_until']:>2} mins {arrival['type']} "
+                      f"{urgency_emoji} {arrival['urgency']:>6}")
 
             # Build DisplayData
             return DisplayData(
@@ -131,24 +149,23 @@ class BusArrivalProvider(DataProvider):
 
     def _sort_by_priority(self, arrivals: List[dict]) -> List[dict]:
         """
-        Sort arrivals with priority routes first, then by time.
+        Sort arrivals by time, with priority routes appearing before non-priority.
 
         Args:
             arrivals: List of arrival dicts
 
         Returns:
-            Sorted list
+            Sorted list (priority routes first, all sorted by soonest arrival)
         """
         def sort_key(arrival):
             route = arrival['route_short_name']
             minutes = arrival['minutes_until']
 
-            # Priority routes get negative index (appear first)
+            # Priority routes appear first, but sorted by time within group
             if route in self.priority_routes:
-                priority = self.priority_routes.index(route)
-                return (0, priority, minutes)  # Sort priority routes by priority, then time
+                return (0, minutes)  # Priority routes sorted by time
             else:
-                return (1, 999, minutes)  # Non-priority sorted only by time
+                return (1, minutes)  # Non-priority sorted by time
 
         return sorted(arrivals, key=sort_key)
 

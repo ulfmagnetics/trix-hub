@@ -332,7 +332,8 @@ class BitmapRenderer(Renderer):
 
         Layout:
         - 4 rows of arrivals (8 pixels each = 32 total)
-        - Format: "67 IB 5 mins TT"
+        - Format: "67 5 mins" (realtime) or "67 5 mins*" (scheduled)
+        - Asterisk indicates scheduled time without vehicle data
         - Color-coded by urgency:
           - Red: <5 minutes (urgent)
           - Yellow: 5-10 minutes (soon)
@@ -387,7 +388,6 @@ class BitmapRenderer(Renderer):
         for i, arrival in enumerate(arrivals[:4]):  # Max 4 arrivals
             # Extract data
             route = arrival.get('route_short_name', '??')
-            direction = arrival.get('direction', '')
             minutes = arrival.get('minutes_until', 0)
             arrival_type = arrival.get('type', 'SC')  # TT or SC
             urgency = arrival.get('urgency', 'normal')
@@ -395,9 +395,9 @@ class BitmapRenderer(Renderer):
             # Get color based on urgency
             color = urgency_colors.get(urgency, (255, 255, 255))
 
-            # Format: "67 IB 5 mins TT"
+            # Format: "67 5 mins" or "67 5 mins*"
             # Build text components
-            route_dir = f"{route} {direction}".strip()
+            route_text = str(route)
 
             # Format minutes
             if minutes == 0:
@@ -407,15 +407,19 @@ class BitmapRenderer(Renderer):
             else:
                 time_text = f"{minutes} mins"
 
-            # Build full line
-            # Layout: "67 IB" on left, "5 mins TT" on right
-            left_text = route_dir
-            right_text = f"{time_text} {arrival_type}"
+            # Add asterisk for scheduled (SC) arrivals only
+            if arrival_type == 'SC':
+                time_text += '*'
 
-            # Draw left text (route + direction)
+            # Build full line
+            # Layout: "67" on left, "5 mins" or "5 mins*" on right
+            left_text = route_text
+            right_text = time_text
+
+            # Draw left text (route number)
             draw.text((2, y_offset), left_text, fill=color, font=font)
 
-            # Draw right text (time + type) - right-aligned
+            # Draw right text (time with optional asterisk) - right-aligned
             right_width = draw.textlength(right_text, font=font)
             right_x = self.width - right_width - 2
             draw.text((right_x, y_offset), right_text, fill=color, font=font)

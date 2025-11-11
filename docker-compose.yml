@@ -43,6 +43,8 @@ services:
       - ./trixhub:/app/trixhub:ro
       # Mount output directory for viewing generated bitmaps
       - ./output:/app/output:rw
+      # Persistent cache for GTFS data (pickled feeds with expiration)
+      - gtfs-cache:/app/cache/gtfs:rw
 
     # Network mode (host network gives access to local network services)
     # 'host' mode required for accessing trix-server on local network via .local hostnames
@@ -64,6 +66,11 @@ services:
         reservations:
           cpus: '0.5'
           memory: 128M
+
+# Volumes for persistent data
+volumes:
+  gtfs-cache:
+    driver: local
 
 # Optional: Create a custom network for multi-container setups
 # networks:

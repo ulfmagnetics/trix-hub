@@ -9,6 +9,8 @@ import os
 import zipfile
 import tempfile
 import shutil
+import pickle
+import time
 from datetime import datetime, timedelta, time as dt_time
 from typing import List, Dict, Any, Optional
 import requests
@@ -26,6 +28,43 @@ def _get_gtfs_kit():
         _gtfs_kit = gk
     return _gtfs_kit
 
+# Singleton registry for GTFSManager instances
+# Key: (static_url, realtime_url) tuple
+# Value: GTFSManager instance
+_manager_instances = {}
+
+def get_gtfs_manager(static_url: str, realtime_url: str,
+                     cache_dir: str = None, cache_days: int = 30) -> 'GTFSManager':
+    """
+    Get or create a singleton GTFSManager instance.
+
+    Multiple providers can share the same GTFSManager if they use the same
+    GTFS feeds (static and realtime URLs).
+
+    Args:
+        static_url: URL to GTFS static ZIP file
+        realtime_url: URL to GTFS-Realtime trip updates feed
+        cache_dir: Directory to cache GTFS data (default: /app/cache/gtfs)
+        cache_days: Days to cache pickled GTFS data (default: 30)
+
+    Returns:
+        Shared GTFSManager instance
+    """
+    key = (static_url, realtime_url)
+
+    if key not in _manager_instances:
+        print(f"[GTFSManager] Creating new singleton instance for {static_url}")
+        _manager_instances[key] = GTFSManager(
+            static_url=static_url,
+            realtime_url=realtime_url,
+            cache_dir=cache_dir,
+            cache_days=cache_days
+        )
+    else:
+        print(f"[GTFSManager] Reusing existing singleton instance for {static_url}")
+
+    return _manager_instances[key]
+
 
 class GTFSManager:
     """
@@ -38,21 +77,27 @@ class GTFSManager:
     - Merging scheduled and realtime arrivals
     """
 
-    def __init__(self, static_url: str, realtime_url: str, cache_dir: str = None):
+    def __init__(self, static_url: str, realtime_url: str, cache_dir: str = None, cache_days: int = 30):
         """
         Initialize GTFS manager.
 
         Args:
             static_url: URL to GTFS static ZIP file
             realtime_url: URL to GTFS-Realtime trip updates feed
-            cache_dir: Directory to cache GTFS data (default: temp directory)
+            cache_dir: Directory to cache GTFS data (default: /app/cache/gtfs)
+            cache_days: Days to cache pickled GTFS data (default: 30)
         """
         self.static_url = static_url
         self.realtime_url = realtime_url
+        self.cache_days = cache_days
 
-        # Set up cache directory
+        # Set up cache directory - prefer persistent location
         if cache_dir is None:
-            self.cache_dir = os.path.join(tempfile.gettempdir(), "trix-hub-gtfs")
+            # Try to use persistent location, fall back to temp
+            if os.path.exists("/app"):
+                self.cache_dir = "/app/cache/gtfs"
+            else:
+                self.cache_dir = os.path.join(tempfile.gettempdir(), "trix-hub-gtfs")
         else:
             self.cache_dir = cache_dir
 
@@ -81,9 +126,91 @@ class GTFSManager:
         print(f"[GTFSManager] Downloaded GTFS static data ({len(response.content)} bytes)")
         return zip_path
 
+    def _get_pickle_path(self) -> Optional[str]:
+        """
+        Find existing valid pickle file or return None.
+
+        Returns:
+            Path to valid pickle file, or None if no valid cache exists
+        """
+        # Look for pickle files matching pattern: gtfs_feed_*.pickle
+        pickle_files = [f for f in os.listdir(self.cache_dir) if f.startswith("gtfs_feed_") and f.endswith(".pickle")]
+
+        for pickle_file in pickle_files:
+            # Extract expiration timestamp from filename
+            try:
+                # Format: gtfs_feed_{expiration_timestamp}.pickle
+                expiration_str = pickle_file.replace("gtfs_feed_", "").replace(".pickle", "")
+                expiration_timestamp = int(expiration_str)
+
+                # Check if expired
+                if time.time() < expiration_timestamp:
+                    # Still valid
+                    return os.path.join(self.cache_dir, pickle_file)
+                else:
+                    # Expired - delete it
+                    expired_path = os.path.join(self.cache_dir, pickle_file)
+                    print(f"[GTFSManager] Removing expired pickle: {pickle_file}")
+                    os.remove(expired_path)
+            except (ValueError, OSError) as e:
+                # Invalid filename format or couldn't delete - skip
+                print(f"[GTFSManager] Warning: Invalid pickle file {pickle_file}: {e}")
+                continue
+
+        return None
+
+    def _save_pickle(self, feed) -> str:
+        """
+        Save GTFS feed to pickle file with expiration timestamp.
+
+        Args:
+            feed: GTFSKit feed object to pickle
+
+        Returns:
+            Path to saved pickle file
+        """
+        # Calculate expiration timestamp (now + cache_days)
+        expiration_timestamp = int(time.time() + (self.cache_days * 86400))
+
+        # Create filename with expiration timestamp
+        pickle_filename = f"gtfs_feed_{expiration_timestamp}.pickle"
+        pickle_path = os.path.join(self.cache_dir, pickle_filename)
+
+        print(f"[GTFSManager] Saving pickled GTFS feed to {pickle_filename}")
+        print(f"[GTFSManager] Cache expires: {datetime.fromtimestamp(expiration_timestamp).strftime('%Y-%m-%d %H:%M:%S')}")
+
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(feed, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return pickle_path
+
+    def _load_pickle(self, pickle_path: str):
+        """
+        Load GTFS feed from pickle file.
+
+        Args:
+            pickle_path: Path to pickle file
+
+        Returns:
+            GTFSKit feed object
+        """
+        print(f"[GTFSManager] Loading pickled GTFS feed from {os.path.basename(pickle_path)}")
+        start_time = time.time()
+
+        with open(pickle_path, 'rb') as f:
+            feed = pickle.load(f)
+
+        elapsed = time.time() - start_time
+        print(f"[GTFSManager] Loaded pickled feed in {elapsed:.2f}s")
+
+        return feed
+
     def _load_static_feed(self, force_refresh: bool = False):
         """
         Load GTFS static feed into memory.
+
+        Uses pickle cache for fast loading (~1-2s vs ~60s parse time).
+        Cache expiration is encoded in the pickle filename.
 
         Args:
             force_refresh: If True, download fresh data even if cached
@@ -91,18 +218,24 @@ class GTFSManager:
         Returns:
             GTFSKit Feed object
         """
-        # Check if we need to refresh
-        should_refresh = force_refresh
-        if self.last_static_update is None:
-            should_refresh = True
-        elif datetime.now() - self.last_static_update > timedelta(days=1):
-            should_refresh = True
-
-        # Use cached feed if available and fresh
-        if not should_refresh and self.feed is not None:
+        # If we already have the feed in memory, return it
+        if not force_refresh and self.feed is not None:
             return self.feed
 
-        # Download and extract GTFS data
+        # Try to load from pickle cache (unless force refresh)
+        if not force_refresh:
+            pickle_path = self._get_pickle_path()
+            if pickle_path:
+                try:
+                    self.feed = self._load_pickle(pickle_path)
+                    self.last_static_update = datetime.now()
+                    print(f"[GTFSManager] Loaded GTFS feed with {len(self.feed.routes)} routes")
+                    return self.feed
+                except Exception as e:
+                    print(f"[GTFSManager] Error loading pickle, will download fresh: {e}")
+                    # Fall through to download fresh data
+
+        # No valid pickle cache - download and parse fresh data
         zip_path = self._download_static_feed()
         extract_dir = os.path.join(self.cache_dir, "gtfs_extracted")
 
@@ -117,11 +250,20 @@ class GTFSManager:
 
         # Load with GTFSKit (lazy import here)
         print("[GTFSManager] Loading GTFS data with GTFSKit...")
+        start_time = time.time()
         gk = _get_gtfs_kit()
         self.feed = gk.read_feed(extract_dir, dist_units='km')
+        elapsed = time.time() - start_time
         self.last_static_update = datetime.now()
 
-        print(f"[GTFSManager] Loaded GTFS feed with {len(self.feed.routes)} routes")
+        print(f"[GTFSManager] Loaded GTFS feed with {len(self.feed.routes)} routes in {elapsed:.2f}s")
+
+        # Save to pickle cache for next time
+        try:
+            self._save_pickle(self.feed)
+        except Exception as e:
+            print(f"[GTFSManager] Warning: Could not save pickle cache: {e}")
+
         return self.feed
 
     def get_scheduled_arrivals(self, stop_id: str, window_minutes: int = 60) -> List[Dict[str, Any]]:
