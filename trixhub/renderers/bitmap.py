@@ -407,9 +407,11 @@ class BitmapRenderer(Renderer):
             else:
                 time_text = f"{minutes} mins"
 
-            # Add asterisk for scheduled (SC) arrivals only
+            # Add asterisk for scheduled (SC) arrivals, space for realtime (TT) to maintain alignment
             if arrival_type == 'SC':
                 time_text += '*'
+            else:
+                time_text += ' '  # Space to match asterisk width for alignment
 
             # Build full line
             # Layout: "67" on left, "5 mins" or "5 mins*" on right
