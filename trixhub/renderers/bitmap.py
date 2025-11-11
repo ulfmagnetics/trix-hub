@@ -203,7 +203,8 @@ class BitmapRenderer(Renderer):
 
         # Helper: wind direction to arrow
         def wind_direction_to_arrow(degrees):
-            degrees = degrees % 360
+            # Invert: arrow points to where wind is coming FROM
+            degrees = (degrees + 180) % 360
             if degrees < 22.5 or degrees >= 337.5:
                 return "↑"
             elif degrees < 67.5:
