@@ -63,6 +63,9 @@ class WeatherProvider(DataProvider):
         self.units = self.config.get("units", "fahrenheit")
         self.forecast_interval_hours = self.config.get("forecast_interval_hours", 3)
 
+        # Get display mode (aqi_wind or lo_hi)
+        self.mode = self.config.get("mode", "aqi_wind")
+
     def fetch_data(self) -> DisplayData:
         """
         Fetch weather data from Open-Meteo API.
@@ -103,25 +106,6 @@ class WeatherProvider(DataProvider):
             now = datetime.now(sunrise.tzinfo)
             is_night = now < sunrise or now > sunset
 
-            # Fetch AQI data if enabled
-            aqi_value = None
-            if self.config.get("aqi_enabled", True):
-                try:
-                    aqi_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
-                    aqi_params = {
-                        "latitude": self.latitude,
-                        "longitude": self.longitude,
-                        "current": "us_aqi",
-                        "timezone": "auto"
-                    }
-                    aqi_response = requests.get(aqi_url, params=aqi_params, timeout=10)
-                    aqi_response.raise_for_status()
-                    aqi_data = aqi_response.json()
-                    aqi_value = int(round(aqi_data["current"]["us_aqi"]))
-                except (requests.RequestException, KeyError, ValueError, TypeError):
-                    # AQI is optional, don't fail if it's unavailable
-                    aqi_value = None
-
             # Calculate moon phase if it's nighttime
             moon_phase = None
             if is_night:
@@ -158,7 +142,49 @@ class WeatherProvider(DataProvider):
             forecast2_code = hourly_codes[forecast2_index]
             forecast2_condition = self._map_weather_code(forecast2_code, is_night, moon_phase)
 
+            # Get daily min/max temperature for lo_hi mode
+            daily_min_temp = None
+            daily_max_temp = None
+            if self.mode == "lo_hi":
+                try:
+                    daily_min_temp = int(round(data["daily"]["temperature_2m_min"][0]))
+                    daily_max_temp = int(round(data["daily"]["temperature_2m_max"][0]))
+                except (KeyError, IndexError, ValueError, TypeError):
+                    daily_min_temp = None
+                    daily_max_temp = None
+
+            # Fetch AQI if in aqi_wind mode
+            aqi_value = None
+            if self.mode == "aqi_wind":
+                try:
+                    aqi_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+                    aqi_params = {
+                        "latitude": self.latitude,
+                        "longitude": self.longitude,
+                        "current": "us_aqi",
+                        "timezone": "auto"
+                    }
+                    aqi_response = requests.get(aqi_url, params=aqi_params, timeout=10)
+                    aqi_response.raise_for_status()
+                    aqi_data = aqi_response.json()
+                    aqi_value = int(round(aqi_data["current"]["us_aqi"]))
+                except (requests.RequestException, KeyError, ValueError, TypeError):
+                    aqi_value = None
+
             # Build DisplayData
+            current_row_data = {}
+            if self.mode == "aqi_wind":
+                current_row_data = {
+                    "windspeed": current_windspeed,
+                    "wind_direction": current_wind_direction,
+                    "aqi": aqi_value
+                }
+            elif self.mode == "lo_hi":
+                current_row_data = {
+                    "lo": daily_min_temp,
+                    "hi": daily_max_temp
+                }
+
             return DisplayData(
                 timestamp=datetime.now(),
                 content={
@@ -167,11 +193,9 @@ class WeatherProvider(DataProvider):
                     "current": {
                         "temperature": current_temp,
                         "condition": current_condition,
-                        "windspeed": current_windspeed,
-                        "wind_direction": current_wind_direction,
                         "units": self.units,
                         "time_label": current_time_label,
-                        "aqi": aqi_value
+                        **current_row_data
                     },
                     "forecast1": {
                         "temperature": forecast1_temp,

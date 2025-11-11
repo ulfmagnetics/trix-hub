@@ -161,17 +161,7 @@ class BitmapRenderer(Renderer):
     def _render_weather(self, data: DisplayData) -> Image.Image:
         """
         Render weather display.
-
-        Layout:
-        - Top row (0-11px): 3 weather icons (12x12) - current, +3h, +6h
-        - Middle row (12-20px): time labels (font size 7) - "Now", "3p", "6p"
-        - Bottom row (22-31px): temp left, AQI center (color-coded), wind right (font size 8)
-
-        Args:
-            data: DisplayData with weather information
-
-        Returns:
-            Rendered PIL Image
+        Dynamically renders AQI/wind or lo/hi based on keys in DisplayData.
         """
         # Create black background (no border/padding for weather)
         img = Image.new('RGB', (self.width, self.height), color='black')
@@ -180,17 +170,14 @@ class BitmapRenderer(Renderer):
         # Check for error condition
         if data.content.get("error"):
             error_msg = data.content.get("error_message", "Weather API error 😢")
-
             # Load font
             if self.font_path:
                 font = ImageFont.truetype(self.font_path, 10)
             else:
                 font = ImageFont.load_default()
-
             # Draw error message centered
             x, y = center_text(error_msg, font, self.width, self.height)
             draw.text((x, y), error_msg, fill='red', font=font)
-
             return img
 
         # Load fonts (reduced to size 8 to fit temp + AQI + wind)
@@ -206,10 +193,7 @@ class BitmapRenderer(Renderer):
 
         current_temp = current.get("temperature", 0)
         current_condition = current.get("condition", "cloudy")
-        current_windspeed = current.get("windspeed", 0)
-        current_wind_direction = current.get("wind_direction", 0)
         current_time_label = current.get("time_label", "Now")
-        current_aqi = current.get("aqi")
 
         forecast1_condition = forecast1.get("condition", "cloudy")
         forecast1_time_label = forecast1.get("time_label", "")
@@ -217,65 +201,51 @@ class BitmapRenderer(Renderer):
         forecast2_condition = forecast2.get("condition", "cloudy")
         forecast2_time_label = forecast2.get("time_label", "")
 
-        # Convert wind direction to arrow
-        # Wind direction in degrees: 0=N, 90=E, 180=S, 270=W
-        # Arrow shows where wind is coming FROM (weathervane style)
+        # Helper: wind direction to arrow
         def wind_direction_to_arrow(degrees):
-            """Convert wind direction in degrees to arrow character."""
-            # Normalize to 0-360
             degrees = degrees % 360
-
-            # Map to 8 directions with arrows showing where wind comes FROM
             if degrees < 22.5 or degrees >= 337.5:
-                return "↑"  # North wind (from North)
+                return "↑"
             elif degrees < 67.5:
-                return "↗"  # Northeast wind
+                return "↗"
             elif degrees < 112.5:
-                return "→"  # East wind (from East)
+                return "→"
             elif degrees < 157.5:
-                return "↘"  # Southeast wind
+                return "↘"
             elif degrees < 202.5:
-                return "↓"  # South wind (from South)
+                return "↓"
             elif degrees < 247.5:
-                return "↙"  # Southwest wind
+                return "↙"
             elif degrees < 292.5:
-                return "←"  # West wind (from West)
+                return "←"
             else:
-                return "↖"  # Northwest wind
+                return "↖"
 
         def aqi_to_color(aqi):
-            """Convert AQI value to US standard color."""
             if aqi is None:
-                return (128, 128, 128)  # Gray for unavailable
+                return (128, 128, 128)
             elif aqi <= 50:
-                return (0, 228, 0)  # Green - Good
+                return (0, 228, 0)
             elif aqi <= 100:
-                return (255, 255, 0)  # Yellow - Moderate
+                return (255, 255, 0)
             elif aqi <= 150:
-                return (255, 126, 0)  # Orange - Unhealthy for Sensitive
+                return (255, 126, 0)
             elif aqi <= 200:
-                return (255, 0, 0)  # Red - Unhealthy
+                return (255, 0, 0)
             elif aqi <= 300:
-                return (143, 63, 151)  # Purple - Very Unhealthy
+                return (143, 63, 151)
             else:
-                return (126, 0, 35)  # Maroon - Hazardous
-
-        wind_arrow = wind_direction_to_arrow(current_wind_direction)
+                return (126, 0, 35)
 
         # Top row: 3 weather icons (12x12)
-        # Icon spacing: centered in ~21px segments
-        icon1_x = 5   # Centered in first 21px
-        icon2_x = 26  # Centered in middle 21px
-        icon3_x = 47  # Centered in last 21px
+        icon1_x = 5
+        icon2_x = 26
+        icon3_x = 47
         icon_y = 0
-
-        # Draw icons
         current_icon = draw_weather_icon(current_condition, size=12)
         img.paste(current_icon, (icon1_x, icon_y))
-
         forecast1_icon = draw_weather_icon(forecast1_condition, size=12)
         img.paste(forecast1_icon, (icon2_x, icon_y))
-
         forecast2_icon = draw_weather_icon(forecast2_condition, size=12)
         img.paste(forecast2_icon, (icon3_x, icon_y))
 
@@ -284,45 +254,57 @@ class BitmapRenderer(Renderer):
             time_font = ImageFont.truetype(self.font_path, 7)
         else:
             time_font = ImageFont.load_default()
-
         time_y = 12
-
-        # Center each time label under its icon
-        # Icon 1 time label
         time1_width = draw.textlength(current_time_label, font=time_font)
         time1_x = icon1_x + (12 - time1_width) // 2
         draw.text((time1_x, time_y), current_time_label, fill='white', font=time_font)
-
-        # Icon 2 time label
         time2_width = draw.textlength(forecast1_time_label, font=time_font)
         time2_x = icon2_x + (12 - time2_width) // 2
         draw.text((time2_x, time_y), forecast1_time_label, fill='white', font=time_font)
-
-        # Icon 3 time label
         time3_width = draw.textlength(forecast2_time_label, font=time_font)
         time3_x = icon3_x + (12 - time3_width) // 2
         draw.text((time3_x, time_y), forecast2_time_label, fill='white', font=time_font)
 
-        # Bottom row: temperature (left), AQI (middle), wind (right)
+        # Bottom row: render based on available keys
         text_y = 22
-
-        # Temperature on left (no unit label)
         temp_text = f"{current_temp}°"
         draw.text((2, text_y), temp_text, fill='white', font=text_font)
 
-        # AQI in middle (color-coded)
-        if current_aqi is not None:
-            aqi_text = str(current_aqi)
-            aqi_color = aqi_to_color(current_aqi)
-            aqi_width = draw.textlength(aqi_text, font=text_font)
-            aqi_x = (self.width - aqi_width) // 2  # Centered
-            draw.text((aqi_x, text_y), aqi_text, fill=aqi_color, font=text_font)
+        # AQI/wind mode
+        if "aqi" in current and "windspeed" in current and "wind_direction" in current:
+            current_aqi = current.get("aqi")
+            current_windspeed = current.get("windspeed", 0)
+            current_wind_direction = current.get("wind_direction", 0)
+            wind_arrow = wind_direction_to_arrow(current_wind_direction)
+            # AQI in middle
+            if current_aqi is not None:
+                aqi_text = str(current_aqi)
+                aqi_color = aqi_to_color(current_aqi)
+                aqi_width = draw.textlength(aqi_text, font=text_font)
+                aqi_x = (self.width - aqi_width) // 2
+                draw.text((aqi_x, text_y), aqi_text, fill=aqi_color, font=text_font)
+            # Wind on right
+            wind_text = f"{wind_arrow}{current_windspeed}"
+            wind_width = draw.textlength(wind_text, font=text_font)
+            wind_x = self.width - wind_width - 2
+            draw.text((wind_x, text_y), wind_text, fill='white', font=text_font)
 
-        # Wind on right (arrow + speed)
-        wind_text = f"{wind_arrow}{current_windspeed}"
-        wind_width = draw.textlength(wind_text, font=text_font)
-        wind_x = self.width - wind_width - 2
-        draw.text((wind_x, text_y), wind_text, fill='white', font=text_font)
+        # lo/hi mode
+        elif "lo" in current and "hi" in current:
+            lo = current.get("lo")
+            hi = current.get("hi")
+            # Down arrow + low temp in center
+            if lo is not None:
+                lo_text = f"↓{lo}°"
+                lo_width = draw.textlength(lo_text, font=text_font)
+                lo_x = (self.width // 2) - lo_width - 2
+                draw.text((lo_x, text_y), lo_text, fill='cyan', font=text_font)
+            # Up arrow + high temp on right
+            if hi is not None:
+                hi_text = f"↑{hi}°"
+                hi_width = draw.textlength(hi_text, font=text_font)
+                hi_x = self.width - hi_width - 2
+                draw.text((hi_x, text_y), hi_text, fill='orange', font=text_font)
 
         return img
 

@@ -99,15 +99,18 @@ class SimpleRotationScheduler:
 
             # Initialize provider
             try:
-                # Check for exact match first
+                # Exact match for base providers
                 if provider_name in provider_classes:
                     self.providers[provider_name] = provider_classes[provider_name]()
                     print(f"[Scheduler] Initialized provider: {provider_name}")
-                # Check if it's a bus provider (name starts with "bus_")
+                # Bus providers (name starts with "bus_")
                 elif provider_name.startswith("bus_"):
-                    # Bus providers use their specific config section
                     self.providers[provider_name] = BusArrivalProvider(config_key=provider_name)
                     print(f"[Scheduler] Initialized bus provider: {provider_name}")
+                # Weather providers (name starts with "weather_")
+                elif provider_name.startswith("weather_"):
+                    self.providers[provider_name] = WeatherProvider()
+                    print(f"[Scheduler] Initialized weather provider: {provider_name}")
                 else:
                     print(f"[Scheduler] Warning: Unknown provider '{provider_name}' in rotation")
             except Exception as e:
