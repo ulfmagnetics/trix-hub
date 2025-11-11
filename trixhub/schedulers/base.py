@@ -23,16 +23,18 @@ class BaseScheduler(ABC):
     and matrix communication. Subclasses implement specific scheduling logic.
     """
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, quiet: bool = False):
         """
         Initialize scheduler with configuration and components.
 
         Args:
             debug: If True, use ASCII renderer and print to console instead of posting bitmaps
+            quiet: If True, reduce logging output to minimize SD card wear
         """
         self.config = get_config()
         self.shutdown_requested = False
         self.debug = debug
+        self.quiet = quiet
 
         # Load configurations
         self.matrix_config = self.config.get_matrix_config()
@@ -98,19 +100,23 @@ class BaseScheduler(ABC):
                 # Exact match for base providers
                 if provider_name in provider_classes:
                     self.providers[provider_name] = provider_classes[provider_name]()
-                    print(f"[Scheduler] Initialized provider: {provider_name}")
+                    if not self.quiet:
+                        print(f"[Scheduler] Initialized provider: {provider_name}")
                 # S3 image provider
                 elif provider_name == "s3_image":
-                    self.providers[provider_name] = S3ImageProvider(config_key=provider_name)
-                    print(f"[Scheduler] Initialized S3 image provider: {provider_name}")
+                    self.providers[provider_name] = S3ImageProvider(config_key=provider_name, quiet=self.quiet)
+                    if not self.quiet:
+                        print(f"[Scheduler] Initialized S3 image provider: {provider_name}")
                 # Bus providers (name starts with "bus_")
                 elif provider_name.startswith("bus_"):
-                    self.providers[provider_name] = BusArrivalProvider(config_key=provider_name)
-                    print(f"[Scheduler] Initialized bus provider: {provider_name}")
+                    self.providers[provider_name] = BusArrivalProvider(config_key=provider_name, quiet=self.quiet)
+                    if not self.quiet:
+                        print(f"[Scheduler] Initialized bus provider: {provider_name}")
                 # Weather providers (name starts with "weather_")
                 elif provider_name.startswith("weather_"):
                     self.providers[provider_name] = WeatherProvider(config_key=provider_name)
-                    print(f"[Scheduler] Initialized weather provider: {provider_name}")
+                    if not self.quiet:
+                        print(f"[Scheduler] Initialized weather provider: {provider_name}")
                 else:
                     print(f"[Scheduler] Warning: Unknown provider '{provider_name}' in rotation")
             except Exception as e:
@@ -171,7 +177,8 @@ class BaseScheduler(ABC):
         """
         # Skip if provider not initialized
         if provider_name not in self.providers:
-            print(f"[{self._timestamp()}] Skipping '{provider_name}' (not initialized)")
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Skipping '{provider_name}' (not initialized)")
             return False
 
         provider = self.providers[provider_name]
@@ -194,14 +201,17 @@ class BaseScheduler(ABC):
                 success = self.client.post_bitmap(bitmap)
 
                 if success:
-                    print(f"[{self._timestamp()}] ✓ Successfully posted bitmap for '{provider_name}'")
+                    if not self.quiet:
+                        print(f"[{self._timestamp()}] ✓ Successfully posted bitmap for '{provider_name}'")
                 else:
+                    # Always log failures
                     print(f"[{self._timestamp()}] ✗ Failed to post bitmap for '{provider_name}'")
 
             # Get display duration and sleep
             duration = self._get_display_duration(provider_name, data, duration_override)
-            print(f"[{self._timestamp()}] Displaying for {duration}s...")
-            print()
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Displaying for {duration}s...")
+                print()
 
             # Sleep in 1-second intervals to allow quick shutdown
             import time

@@ -18,12 +18,13 @@ class TimeWindowedScheduler(BaseScheduler):
     Supports midnight wraparound for time windows like 21:00-06:00.
     """
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, quiet: bool = False):
         """
         Initialize time-windowed rotation scheduler.
 
         Args:
             debug: If True, use ASCII renderer and print to console
+            quiet: If True, reduce logging output to minimize SD card wear
         """
         # Pre-load rotations config before calling super().__init__()
         # This is needed because super().__init__() calls _init_providers()
@@ -38,7 +39,7 @@ class TimeWindowedScheduler(BaseScheduler):
         })
 
         # Call super().__init__() - this will use our rotations
-        super().__init__(debug=debug)
+        super().__init__(debug=debug, quiet=quiet)
 
         # Validate rotations
         if not self.rotations:
@@ -178,14 +179,17 @@ class TimeWindowedScheduler(BaseScheduler):
 
         # Clear display if not in debug mode
         if not self.debug and self.client:
-            print(f"[{self._timestamp()}] Clearing display for '{rotation_name}' rotation")
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Clearing display for '{rotation_name}' rotation")
             self.client.clear_display()
         else:
-            print(f"[{self._timestamp()}] Blank screen rotation: '{rotation_name}'")
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Blank screen rotation: '{rotation_name}'")
 
         # Sleep in 5-second intervals, checking for rotation changes
-        print(f"[{self._timestamp()}] Waiting for next rotation...")
-        print()
+        if not self.quiet:
+            print(f"[{self._timestamp()}] Waiting for next rotation...")
+            print()
 
         while not self.shutdown_requested:
             # Check if we should switch rotation
@@ -226,7 +230,8 @@ class TimeWindowedScheduler(BaseScheduler):
             duration_override = provider_entry.get("duration")
 
             # Display provider
-            print(f"[{self._timestamp()}] Rotation: {rotation_name} - Provider: {provider_name}")
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Rotation: {rotation_name} - Provider: {provider_name}")
             self._display_provider(provider_name, duration_override)
 
     def run(self):
@@ -239,6 +244,8 @@ class TimeWindowedScheduler(BaseScheduler):
         print("trix-hub Time-Windowed Rotation Scheduler")
         if self.debug:
             print("*** DEBUG MODE - ASCII Output ***")
+        if self.quiet:
+            print("*** QUIET MODE - Minimal Logging ***")
         print("=" * 70)
         print(f"Mode: {self.scheduler_config.get('mode', 'time_windowed_rotation')}")
         print(f"Default display duration: {self.default_duration}s")
@@ -276,7 +283,8 @@ class TimeWindowedScheduler(BaseScheduler):
             rotation_name = active_rotation.get("name", "fallback")
             is_blank = active_rotation.get("blank_screen", False)
 
-            print(f"[{self._timestamp()}] Cycle #{cycle_count} - Active rotation: {rotation_name}")
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Cycle #{cycle_count} - Active rotation: {rotation_name}")
 
             if is_blank:
                 # Handle blank screen rotation

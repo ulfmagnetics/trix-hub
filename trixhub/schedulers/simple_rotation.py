@@ -15,14 +15,15 @@ class SimpleRotationScheduler(BaseScheduler):
     and posting them to the Matrix Portal display.
     """
 
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, quiet: bool = False):
         """
         Initialize simple rotation scheduler.
 
         Args:
             debug: If True, use ASCII renderer and print to console
+            quiet: If True, reduce logging output to minimize SD card wear
         """
-        super().__init__(debug=debug)
+        super().__init__(debug=debug, quiet=quiet)
 
         # Get provider rotation order
         self.provider_rotation = self.scheduler_config.get("provider_rotation", [])
@@ -56,6 +57,8 @@ class SimpleRotationScheduler(BaseScheduler):
         print("trix-hub Simple Rotation Scheduler")
         if self.debug:
             print("*** DEBUG MODE - ASCII Output ***")
+        if self.quiet:
+            print("*** QUIET MODE - Minimal Logging ***")
         print("=" * 70)
         print(f"Mode: {self.scheduler_config.get('mode', 'simple_rotation')}")
         print(f"Default display duration: {self.default_duration}s")
@@ -84,5 +87,6 @@ class SimpleRotationScheduler(BaseScheduler):
                 duration_override = self._get_provider_duration_override(provider_name)
 
                 # Display provider
-                print(f"[{self._timestamp()}] Rotation #{rotation_count} - Provider: {provider_name}")
+                if not self.quiet:
+                    print(f"[{self._timestamp()}] Rotation #{rotation_count} - Provider: {provider_name}")
                 self._display_provider(provider_name, duration_override)

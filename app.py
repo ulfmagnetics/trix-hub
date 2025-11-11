@@ -56,6 +56,11 @@ Examples:
         action="store_true",
         help="Debug mode: render ASCII to console instead of posting bitmaps"
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Quiet mode: minimal logging output to reduce SD card wear"
+    )
     args = parser.parse_args()
 
     # Register signal handlers for graceful shutdown
@@ -65,7 +70,7 @@ Examples:
     try:
         # Get config and create appropriate scheduler based on mode
         config = get_config()
-        scheduler = get_scheduler(config, debug=args.debug)
+        scheduler = get_scheduler(config, debug=args.debug, quiet=args.quiet)
         scheduler.run()
 
     except Exception as e:

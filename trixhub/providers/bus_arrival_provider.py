@@ -27,7 +27,7 @@ class BusArrivalProvider(DataProvider):
 
     def __init__(self, stop_id: str = None, priority_routes: List[str] = None,
                  gtfs_static_url: str = None, gtfs_realtime_url: str = None,
-                 config_key: str = None):
+                 config_key: str = None, quiet: bool = False):
         """
         Initialize bus arrival provider.
 
@@ -37,8 +37,11 @@ class BusArrivalProvider(DataProvider):
             gtfs_static_url: URL to GTFS static ZIP (if None, uses config)
             gtfs_realtime_url: URL to GTFS-Realtime feed (if None, uses config)
             config_key: Config key to use (if None, uses "bus")
+            quiet: If True, reduce logging output to minimize SD card wear
         """
         super().__init__()
+
+        self.quiet = quiet
 
         # Get config if parameters not provided
         # Use the config_key to look up the right section (e.g., "bus_7637")
@@ -101,20 +104,21 @@ class BusArrivalProvider(DataProvider):
                 arrival['urgency'] = self._calculate_urgency(arrival['minutes_until'])
 
             # Debug output - print arrivals to console
-            print(f"[BusArrivalProvider] Stop {self.stop_id} - {len(arrivals)} arrivals:")
-            for i, arrival in enumerate(arrivals, 1):
-                urgency_emoji = {
-                    'urgent': '🔴',  # Red
-                    'soon': '🟡',    # Yellow
-                    'normal': '🟢'   # Green
-                }.get(arrival['urgency'], '⚪')
+            if not self.quiet:
+                print(f"[BusArrivalProvider] Stop {self.stop_id} - {len(arrivals)} arrivals:")
+                for i, arrival in enumerate(arrivals, 1):
+                    urgency_emoji = {
+                        'urgent': '🔴',  # Red
+                        'soon': '🟡',    # Yellow
+                        'normal': '🟢'   # Green
+                    }.get(arrival['urgency'], '⚪')
 
-                direction = arrival.get('direction', '')
-                direction_str = f" {direction}" if direction else ""
+                    direction = arrival.get('direction', '')
+                    direction_str = f" {direction}" if direction else ""
 
-                print(f"  {i}. {arrival['route_short_name']:>4}{direction_str} "
-                      f"{arrival['minutes_until']:>2} mins {arrival['type']} "
-                      f"{urgency_emoji} {arrival['urgency']:>6}")
+                    print(f"  {i}. {arrival['route_short_name']:>4}{direction_str} "
+                          f"{arrival['minutes_until']:>2} mins {arrival['type']} "
+                          f"{urgency_emoji} {arrival['urgency']:>6}")
 
             # Build DisplayData
             return DisplayData(

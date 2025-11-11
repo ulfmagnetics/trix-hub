@@ -30,14 +30,17 @@ class S3ImageProvider(DataProvider):
     Supports automatic format conversion and resizing to 64x32.
     """
 
-    def __init__(self, config_key: str = "s3_image"):
+    def __init__(self, config_key: str = "s3_image", quiet: bool = False):
         """
         Initialize S3 image provider.
 
         Args:
             config_key: Key in config.json providers section (default: "s3_image")
+            quiet: If True, reduce logging output to minimize SD card wear
         """
         super().__init__()
+
+        self.quiet = quiet
 
         # Load configuration
         from trixhub.config import get_config
@@ -91,7 +94,8 @@ class S3ImageProvider(DataProvider):
                 # Use default credential chain (IAM role, etc.)
                 self.s3_client = boto3.client('s3', region_name=self.region)
 
-            print(f"[S3ImageProvider] Initialized S3 client for bucket: {self.bucket_name}")
+            if not self.quiet:
+                print(f"[S3ImageProvider] Initialized S3 client for bucket: {self.bucket_name}")
 
         except NoCredentialsError:
             print("[S3ImageProvider] ERROR: No AWS credentials found")
@@ -124,7 +128,8 @@ class S3ImageProvider(DataProvider):
             return
 
         try:
-            print(f"[S3ImageProvider] Listing bucket: {self.bucket_name} (prefix: {self.prefix or '(none)'})")
+            if not self.quiet:
+                print(f"[S3ImageProvider] Listing bucket: {self.bucket_name} (prefix: {self.prefix or '(none)'})")
 
             # List objects in bucket
             paginator = self.s3_client.get_paginator('list_objects_v2')
@@ -146,7 +151,8 @@ class S3ImageProvider(DataProvider):
             self._image_keys = image_keys
             self._current_index = 0
 
-            print(f"[S3ImageProvider] Found {len(self._image_keys)} images in bucket")
+            if not self.quiet:
+                print(f"[S3ImageProvider] Found {len(self._image_keys)} images in bucket")
 
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
@@ -268,7 +274,8 @@ class S3ImageProvider(DataProvider):
         key = self._image_keys[self._current_index]
         self._current_index += 1
 
-        print(f"[S3ImageProvider] Fetching image {self._current_index}/{len(self._image_keys)}: {key}")
+        if not self.quiet:
+            print(f"[S3ImageProvider] Fetching image {self._current_index}/{len(self._image_keys)}: {key}")
 
         # Fetch and process image
         image = self._fetch_image_from_s3(key)

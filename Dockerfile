@@ -64,4 +64,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Run the application (will be executed by entrypoint as trixhub user)
-CMD ["python", "app.py"]
+# NOTE: remove '--quiet' for normal logging
+CMD ["python", "app.py", "--quiet"]
