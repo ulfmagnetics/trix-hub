@@ -10,6 +10,7 @@ from typing import Dict, Any
 
 from trixhub.config import get_config
 from trixhub.providers import TimeProvider, WeatherProvider, BusArrivalProvider, DataProvider
+from trixhub.providers.s3_image_provider import S3ImageProvider
 from trixhub.renderers import BitmapRenderer, ASCIIRenderer
 from trixhub.client import MatrixClient
 
@@ -98,6 +99,10 @@ class BaseScheduler(ABC):
                 if provider_name in provider_classes:
                     self.providers[provider_name] = provider_classes[provider_name]()
                     print(f"[Scheduler] Initialized provider: {provider_name}")
+                # S3 image provider
+                elif provider_name == "s3_image":
+                    self.providers[provider_name] = S3ImageProvider(config_key=provider_name)
+                    print(f"[Scheduler] Initialized S3 image provider: {provider_name}")
                 # Bus providers (name starts with "bus_")
                 elif provider_name.startswith("bus_"):
                     self.providers[provider_name] = BusArrivalProvider(config_key=provider_name)

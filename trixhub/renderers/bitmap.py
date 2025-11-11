@@ -68,6 +68,8 @@ class BitmapRenderer(Renderer):
             return self._render_weather(data)
         elif content_type == "bus_arrivals":
             return self._render_bus_arrivals(data)
+        elif content_type == "s3_image":
+            return self._render_s3_image(data)
         else:
             return self._render_error(f"Unknown type: {content_type}")
 
@@ -418,6 +420,40 @@ class BitmapRenderer(Renderer):
             draw.text((x, y), no_arrivals_msg, fill='white', font=font)
 
         return img
+
+    def _render_s3_image(self, data: DisplayData) -> Image.Image:
+        """
+        Render S3 image.
+
+        The S3ImageProvider already handles resizing/cropping to 64x32,
+        so this method simply returns the image from content or displays
+        an error if the image failed to load.
+
+        Args:
+            data: DisplayData with PIL Image in content['image']
+
+        Returns:
+            Rendered PIL Image (64x32)
+        """
+        # Check for errors
+        if data.content.get("error"):
+            error_message = data.content.get("error_message", "Unknown error")
+            return self._render_error(f"S3: {error_message}")
+
+        # Get image from content
+        image = data.content.get("image")
+        if image is None:
+            return self._render_error("S3: No image in data")
+
+        # Verify image is correct size
+        if image.size != (self.width, self.height):
+            return self._render_error(f"S3: Size mismatch {image.size}")
+
+        # Verify image is RGB mode
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        return image
 
     def _render_error(self, message: str) -> Image.Image:
         """

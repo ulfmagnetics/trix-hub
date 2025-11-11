@@ -32,6 +32,12 @@ services:
       # Timezone
       - TZ=America/New_York
 
+      # AWS S3 credentials (optional - only needed for S3 image provider)
+      # Can also be configured in config.json instead of environment variables
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+
     # Volume mounts for development
     # WARNING: Requires files to exist in the current directory
     # If you get "not a directory" errors, comment out this entire volumes section

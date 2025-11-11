@@ -23,6 +23,10 @@
       {
         "name": "bus_7734",
         "duration": 20
+      },
+      {
+        "name": "s3_image",
+        "duration": 15
       }
     ]
   },
@@ -76,7 +80,8 @@
           {"name": "time", "duration": 5},
           {"name": "weather", "duration": 15},
           {"name": "bus_7637", "duration": 10},
-          {"name": "bus_8475", "duration": 10}
+          {"name": "bus_8475", "duration": 10},
+          {"name": "s3_image", "duration": 15}
         ]
       },
       {
@@ -145,6 +150,15 @@
       "window_minutes": 60,
       "cache_duration": 30,
       "gtfs_cache_days": 30
+    },
+    "s3_image": {
+      "enabled": true,
+      "s3_bucket": "my-led-matrix-images",
+      "s3_prefix": "images/",
+      "aws_region": "us-east-1",
+      "_comment_credentials": "AWS credentials can be provided via environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or inline below",
+      "aws_access_key_id": "",
+      "aws_secret_access_key": ""
     }
    }
 }
