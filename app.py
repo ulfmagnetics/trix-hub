@@ -58,7 +58,7 @@ class SimpleRotationScheduler:
         else:
             # Normal mode: use bitmap renderer and matrix client
             self.client = MatrixClient(
-                server_url=self.matrix_config.get("server_url", "http://trix-server.local/display"),
+                server_hostname=self.matrix_config.get("server_hostname", "http://trix-server.local"),
                 width=self.matrix_config.get("width", 64),
                 height=self.matrix_config.get("height", 32),
                 output_dir=self.matrix_config.get("output_dir", "output")
@@ -158,7 +158,7 @@ class SimpleRotationScheduler:
         print(f"Default display duration: {self.default_duration}s")
         print(f"Providers in rotation: {', '.join([p.get('name') for p in self.provider_rotation])}")
         if not self.debug:
-            print(f"Matrix server: {self.matrix_config.get('server_url')}")
+            print(f"Matrix server: {self.matrix_config.get('server_hostname')}")
         print(f"Display size: {self.matrix_config.get('width')}x{self.matrix_config.get('height')}")
         print("=" * 70)
         print()
@@ -239,11 +239,19 @@ class SimpleRotationScheduler:
 
 
 def signal_handler(signum, frame):
+    global scheduler
+
     """Handle shutdown signals - exit immediately."""
     print()
     print("=" * 70)
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Shutdown requested...")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Shutdown requested with signum {signum}...")
     print("=" * 70)
+
+    # Clear display on shutdown
+    if scheduler and scheduler.client and not scheduler.debug:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Attempting to clear display...")
+        scheduler.client.clear_display()
+
     # Exit immediately - don't wait for graceful shutdown
     sys.exit(0)
 

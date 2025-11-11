@@ -108,10 +108,10 @@ class Config:
         Get Matrix Portal configuration.
 
         Returns:
-            Matrix configuration dictionary with server_url, width, height, output_dir
+            Matrix configuration dictionary with server_hostname, width, height, output_dir
         """
         return self.get("matrix", default={
-            "server_url": "http://trix-server.local/display",
+            "server_hostname": "http://trix-server.local",
             "width": 64,
             "height": 32,
             "output_dir": "output"

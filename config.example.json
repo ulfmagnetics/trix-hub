@@ -1,6 +1,6 @@
 {
   "matrix": {
-    "server_url": "http://trix-server.local/display",
+    "server_hostname": "http://trix-server.local",
     "width": 64,
     "height": 32,
     "output_dir": "output"
