@@ -19,16 +19,14 @@ else
 fi
 
 # Execute the main application command as the trixhub user
-# Note: Using su to drop privileges from root to trixhub
+# Note: Using su (without -) to preserve environment variables like PYTHONUNBUFFERED
 if [ "$#" -eq 0 ]; then
     # No command specified, start interactive shell
-    exec su - trixhub
+    cd /app
+    exec su trixhub
 else
-    # Command specified, execute it with proper quoting
-    # Build command string with proper escaping
-    cmd="cd /app && exec"
-    for arg in "$@"; do
-        cmd="$cmd '$arg'"
-    done
-    exec su - trixhub -c "$cmd"
+    # Command specified, execute it
+    # Use su without - to preserve environment variables
+    cd /app
+    exec su trixhub -c "exec $*"
 fi
