@@ -109,7 +109,10 @@ class BusArrivalProvider(DataProvider):
                     'normal': '🟢'   # Green
                 }.get(arrival['urgency'], '⚪')
 
-                print(f"  {i}. {arrival['route_short_name']:>4} "
+                direction = arrival.get('direction', '')
+                direction_str = f" {direction}" if direction else ""
+
+                print(f"  {i}. {arrival['route_short_name']:>4}{direction_str} "
                       f"{arrival['minutes_until']:>2} mins {arrival['type']} "
                       f"{urgency_emoji} {arrival['urgency']:>6}")
 
@@ -179,12 +182,12 @@ class BusArrivalProvider(DataProvider):
         Returns:
             'urgent' (red), 'soon' (yellow), or 'normal' (green)
         """
-        if minutes < 5:
-            return 'urgent'  # Red
-        elif minutes < 10:
-            return 'soon'    # Yellow
+        if minutes <= 5:
+            return 'urgent'  # Red (0-5 mins)
+        elif minutes <= 10:
+            return 'soon'    # Yellow (6-10 mins)
         else:
-            return 'normal'  # Green
+            return 'normal'  # Green (11+ mins)
 
     def get_cache_duration(self) -> timedelta:
         """
