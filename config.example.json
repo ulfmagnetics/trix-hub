@@ -26,6 +26,7 @@
   "providers": {
     "weather": {
       "enabled": true,
+      "mode": "lo_hi",
       "location": {
         "latitude": 40.0,
         "longitude": -80.0,
@@ -33,8 +34,7 @@
       },
       "units": "fahrenheit",
       "forecast_interval_hours": 3,
-      "cache_duration": 600,
-      "aqi_enabled": true
+      "cache_duration": 600
     },
     "time": {
       "enabled": true,

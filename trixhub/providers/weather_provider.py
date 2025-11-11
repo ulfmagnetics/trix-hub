@@ -49,10 +49,11 @@ class WeatherProvider(DataProvider):
         99: "thunderstorm",  # Thunderstorm with heavy hail
     }
 
-    def __init__(self):
+    def __init__(self, config_key: str = None):
         """Initialize weather provider with configuration."""
         super().__init__()
-        self.config = get_config().get_provider_config("weather")
+        config_key = config_key or "weather"
+        self.config = get_config().get_provider_config(config_key)
 
         # Get location from config
         self.latitude = self.config.get("location", {}).get("latitude", 40.0)
@@ -84,7 +85,7 @@ class WeatherProvider(DataProvider):
                 "longitude": self.longitude,
                 "current": "temperature_2m,weathercode,windspeed_10m,winddirection_10m",
                 "hourly": "temperature_2m,weathercode",
-                "daily": "sunrise,sunset",
+                "daily": "sunrise,sunset,temperature_2m_min,temperature_2m_max",
                 "temperature_unit": self.units,
                 "windspeed_unit": "mph",
                 "forecast_days": 1,

@@ -109,7 +109,7 @@ class SimpleRotationScheduler:
                     print(f"[Scheduler] Initialized bus provider: {provider_name}")
                 # Weather providers (name starts with "weather_")
                 elif provider_name.startswith("weather_"):
-                    self.providers[provider_name] = WeatherProvider()
+                    self.providers[provider_name] = WeatherProvider(config_key=provider_name)
                     print(f"[Scheduler] Initialized weather provider: {provider_name}")
                 else:
                     print(f"[Scheduler] Warning: Unknown provider '{provider_name}' in rotation")

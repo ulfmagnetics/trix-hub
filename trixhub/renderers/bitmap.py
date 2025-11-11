@@ -297,13 +297,13 @@ class BitmapRenderer(Renderer):
             if lo is not None:
                 lo_text = f"↓{lo}°"
                 lo_width = draw.textlength(lo_text, font=text_font)
-                lo_x = (self.width // 2) - lo_width - 2
+                lo_x = ((self.width - lo_width) // 2) - 2
                 draw.text((lo_x, text_y), lo_text, fill='cyan', font=text_font)
             # Up arrow + high temp on right
             if hi is not None:
                 hi_text = f"↑{hi}°"
                 hi_width = draw.textlength(hi_text, font=text_font)
-                hi_x = self.width - hi_width - 2
+                hi_x = self.width - hi_width 
                 draw.text((hi_x, text_y), hi_text, fill='orange', font=text_font)
 
         return img
