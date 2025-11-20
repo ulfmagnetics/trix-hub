@@ -46,6 +46,9 @@ class S3ImageProvider(DataProvider):
         from trixhub.config import get_config
         self.config = get_config().get_provider_config(config_key)
 
+        # Load conditions for conditional execution (e.g., birthdays, holidays)
+        self._load_conditions(self.config)
+
         # S3 configuration
         self.bucket_name = self.config.get("s3_bucket")
         self.prefix = self.config.get("s3_prefix", "")

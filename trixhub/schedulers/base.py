@@ -183,6 +183,12 @@ class BaseScheduler(ABC):
 
         provider = self.providers[provider_name]
 
+        # Check if provider should run based on conditions
+        if not provider.should_run():
+            if not self.quiet:
+                print(f"[{self._timestamp()}] Skipping '{provider_name}' (conditions not met)")
+            return False
+
         try:
             # Fetch data from provider (respects cache)
             data = provider.get_data()

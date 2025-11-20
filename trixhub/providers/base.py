@@ -7,8 +7,11 @@ and return renderer-agnostic DisplayData objects.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Dict, TYPE_CHECKING
 from datetime import datetime, timedelta
+
+if TYPE_CHECKING:
+    from trixhub.conditions import ConditionEvaluator
 
 
 @dataclass
@@ -43,6 +46,7 @@ class DataProvider(ABC):
         """Initialize provider with empty cache"""
         self._cache: Optional[DisplayData] = None
         self._cache_expires: Optional[datetime] = None
+        self._condition_evaluator: Optional['ConditionEvaluator'] = None
 
     @abstractmethod
     def fetch_data(self) -> DisplayData:
@@ -98,3 +102,31 @@ class DataProvider(ABC):
         """Clear the cache, forcing next get_data() to fetch fresh data"""
         self._cache = None
         self._cache_expires = None
+
+    def should_run(self) -> bool:
+        """
+        Check if provider should run based on configured conditions.
+
+        Default implementation checks self._condition_evaluator if set by subclass.
+        Subclasses can override for custom condition logic.
+
+        Returns:
+            True if provider should run, False to skip
+        """
+        if self._condition_evaluator is None:
+            return True  # No conditions = always run
+        return self._condition_evaluator.should_run()
+
+    def _load_conditions(self, config: Dict[str, Any]):
+        """
+        Helper to load conditions from provider config.
+
+        Subclasses should call this in __init__ if they support conditional execution.
+
+        Args:
+            config: Provider configuration dict
+        """
+        conditions_config = config.get("conditions", {})
+        if conditions_config:
+            from trixhub.conditions import ConditionEvaluator
+            self._condition_evaluator = ConditionEvaluator(conditions_config)

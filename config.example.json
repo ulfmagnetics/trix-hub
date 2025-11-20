@@ -159,6 +159,58 @@
       "_comment_credentials": "AWS credentials can be provided via environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) or inline below",
       "aws_access_key_id": "",
       "aws_secret_access_key": ""
+    },
+    "_comment_conditional_providers": "Examples of providers with conditional execution (only run when conditions are met)",
+    "s3_image_birthday": {
+      "enabled": false,
+      "s3_bucket": "family-photos",
+      "s3_prefix": "birthdays/",
+      "aws_region": "us-east-1",
+      "_comment_conditions": "This provider only runs on specific dates (birthdays)",
+      "conditions": {
+        "date_match": ["01-15", "06-22", "09-10", "12-25"]
+      }
+    },
+    "s3_image_christmas": {
+      "enabled": false,
+      "s3_bucket": "holiday-photos",
+      "s3_prefix": "christmas/",
+      "aws_region": "us-east-1",
+      "_comment_conditions": "This provider only runs during Christmas season (Dec 1-31)",
+      "conditions": {
+        "date_range": ["12-01", "12-31"]
+      }
+    },
+    "s3_image_weekend": {
+      "enabled": false,
+      "s3_bucket": "weekend-photos",
+      "s3_prefix": "fun/",
+      "aws_region": "us-east-1",
+      "_comment_conditions": "This provider only runs on weekends (0=Sunday, 6=Saturday)",
+      "conditions": {
+        "day_of_week": [0, 6]
+      }
+    },
+    "s3_image_summer": {
+      "enabled": false,
+      "s3_bucket": "seasonal-photos",
+      "s3_prefix": "summer/",
+      "aws_region": "us-east-1",
+      "_comment_conditions": "This provider only runs during summer months (June, July, August)",
+      "conditions": {
+        "months": [6, 7, 8]
+      }
+    },
+    "s3_image_winter_weekends": {
+      "enabled": false,
+      "s3_bucket": "seasonal-photos",
+      "s3_prefix": "winter-weekends/",
+      "aws_region": "us-east-1",
+      "_comment_conditions": "Multiple conditions combined with AND logic (winter months AND weekends)",
+      "conditions": {
+        "months": [12, 1, 2],
+        "day_of_week": [0, 6]
+      }
     }
    }
 }
