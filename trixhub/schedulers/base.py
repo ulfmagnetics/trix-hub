@@ -102,8 +102,8 @@ class BaseScheduler(ABC):
                     self.providers[provider_name] = provider_classes[provider_name]()
                     if not self.quiet:
                         print(f"[Scheduler] Initialized provider: {provider_name}")
-                # S3 image provider
-                elif provider_name == "s3_image":
+                # S3 image providers (name starts with "s3_image")
+                elif provider_name.startswith("s3_image"):
                     self.providers[provider_name] = S3ImageProvider(config_key=provider_name, quiet=self.quiet)
                     if not self.quiet:
                         print(f"[Scheduler] Initialized S3 image provider: {provider_name}")
