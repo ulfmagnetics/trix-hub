@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from .base import BaseScheduler
+from trixhub.conditions import ConditionEvaluator
 
 
 class TimeWindowedScheduler(BaseScheduler):
@@ -131,9 +132,29 @@ class TimeWindowedScheduler(BaseScheduler):
         now = datetime.now()
         return now.hour * 60 + now.minute
 
+    def _check_rotation_conditions(self, rotation: Dict[str, Any]) -> bool:
+        """
+        Check if rotation's conditions are met.
+
+        Args:
+            rotation: Rotation dict (may contain 'conditions' key)
+
+        Returns:
+            True if conditions pass (or no conditions configured), False otherwise
+        """
+        conditions = rotation.get("conditions")
+        if not conditions:
+            return True  # No conditions = always runs
+
+        evaluator = ConditionEvaluator(conditions)
+        return evaluator.should_run()
+
     def _get_active_rotation(self) -> Dict[str, Any]:
         """
         Get the rotation for the current time window.
+
+        Checks both time window AND conditions for each rotation.
+        Continues to next rotation if conditions don't match.
 
         Returns:
             Rotation dict, or fallback rotation if no match
@@ -146,8 +167,17 @@ class TimeWindowedScheduler(BaseScheduler):
             end = time_window.get("end")
 
             if start and end:
+                # Check if time window matches
                 if self._is_time_in_window(current_minutes, start, end):
-                    return rotation
+                    # Check if conditions match
+                    if self._check_rotation_conditions(rotation):
+                        # Both time and conditions match!
+                        return rotation
+                    else:
+                        # Time matches but conditions don't - continue to next rotation
+                        if not self.quiet:
+                            rotation_name = rotation.get("name", "unnamed")
+                            print(f"[{self._timestamp()}] Rotation '{rotation_name}' time matches but conditions not met, checking next...")
 
         # No matching rotation, return fallback
         return self.fallback_rotation
@@ -262,11 +292,31 @@ class TimeWindowedScheduler(BaseScheduler):
             start = window.get("start", "?")
             end = window.get("end", "?")
             is_blank = rotation.get("blank_screen", False)
+            conditions = rotation.get("conditions")
+
+            # Build condition description
+            condition_desc = ""
+            if conditions:
+                parts = []
+                if "date_match" in conditions:
+                    parts.append(f"dates={','.join(conditions['date_match'])}")
+                if "date_range" in conditions:
+                    parts.append(f"range={'-'.join(conditions['date_range'])}")
+                if "day_of_week" in conditions:
+                    days = conditions['day_of_week']
+                    day_names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                    day_str = ','.join([day_names[d] for d in days if 0 <= d <= 6])
+                    parts.append(f"days={day_str}")
+                if "months" in conditions:
+                    parts.append(f"months={','.join(map(str, conditions['months']))}")
+                if parts:
+                    condition_desc = f" [conditions: {'; '.join(parts)}]"
+
             if is_blank:
-                print(f"  {name}: {start}-{end} (blank screen)")
+                print(f"  {name}: {start}-{end} (blank screen){condition_desc}")
             else:
                 provider_names = [p.get("name") for p in rotation.get("providers", [])]
-                print(f"  {name}: {start}-{end} -> {', '.join(provider_names)}")
+                print(f"  {name}: {start}-{end} -> {', '.join(provider_names)}{condition_desc}")
         print("=" * 70)
         print()
         print("Starting scheduler... (Press Ctrl+C to stop)")
