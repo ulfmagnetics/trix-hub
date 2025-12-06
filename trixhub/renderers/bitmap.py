@@ -5,6 +5,7 @@ Renders DisplayData to PIL Image objects suitable for 64x32 RGB LED matrices.
 """
 
 import os
+import random
 from PIL import Image, ImageDraw, ImageFont
 from trixhub.providers.base import DisplayData
 from trixhub.renderers.base import Renderer
@@ -75,10 +76,10 @@ class BitmapRenderer(Renderer):
 
     def _render_time(self, data: DisplayData) -> Image.Image:
         """
-        Render time display with border and padding.
+        Render time display without border.
 
-        Shows time at top in ROYGBIV rainbow colors, date at bottom right-aligned,
-        with 1px grey border and 2px padding.
+        Shows time at top left and date at bottom left, each in a random color
+        from the palette. Colors change with each render.
 
         Args:
             data: DisplayData with time information
@@ -90,21 +91,16 @@ class BitmapRenderer(Renderer):
         img = Image.new('RGB', (self.width, self.height), color='black')
         draw = ImageDraw.Draw(img)
 
-        # Draw 1-pixel grey border
-        border_color = (128, 128, 128)
-        draw.rectangle(
-            [(0, 0), (self.width - 1, self.height - 1)],
-            outline=border_color,
-            width=1
-        )
+        # Color palette (Steel Blue, Yellow Green, Saffron, Cayenne Red)
+        palette = [
+            (45, 125, 210),   # Steel Blue (#2D7DD2)
+            (151, 204, 4),    # Yellow Green (#97CC04)
+            (238, 185, 2),    # Saffron (#EEB902)
+            (244, 93, 1),     # Cayenne Red (#F45D01)
+        ]
 
-        # Define content area (1px border + 2px padding = 3px offset on each side)
-        content_x = 3
-        content_y = 3
-        content_width = self.width - 6  # 58 pixels
-        content_height = self.height - 6  # 26 pixels
-        content_right = self.width - 3  # 61
-        content_bottom = self.height - 3  # 29
+        # Select two different random colors
+        time_color, date_color = random.sample(palette, 2)
 
         # Load fonts
         if self.font_path:
@@ -114,49 +110,21 @@ class BitmapRenderer(Renderer):
             time_font = ImageFont.load_default()
             date_font = ImageFont.load_default()
 
-        # Get time string
+        # Get time string and draw at top left
         time_str = data.content.get("time_12h", "??:??")
+        time_x = 2  # Left-aligned with small padding
+        time_y = 2  # Top-aligned with small padding
+        draw.text((time_x, time_y), time_str, fill=time_color, font=time_font)
 
-        # ROYGBIV rainbow colors
-        rainbow_colors = [
-            (255, 0, 0),      # Red
-            (255, 127, 0),    # Orange
-            (255, 255, 0),    # Yellow
-            (0, 255, 0),      # Green
-            (0, 0, 255),      # Blue
-            (75, 0, 130),     # Indigo
-            (148, 0, 211),    # Violet
-        ]
-
-        # Calculate time width for centering
-        time_width = draw.textlength(time_str, font=time_font)
-        time_x = content_x + (content_width - time_width) // 2
-        time_y = content_y + 2  # Near top of content area
-
-        # Draw each character in a different color (skip spaces)
-        current_x = time_x
-        color_index = 0
-        for char in time_str:
-            # Skip spaces for color assignment
-            if char == ' ':
-                color = (0, 0, 0)  # Black (invisible on black background)
-            else:
-                color = rainbow_colors[color_index % len(rainbow_colors)]
-                color_index += 1
-
-            draw.text((current_x, time_y), char, fill=color, font=time_font)
-
-            # Move to next character position
-            char_width = draw.textlength(char, font=time_font)
-            current_x += char_width
-
-        # Add date at bottom, right-aligned
+        # Get date string and draw at bottom left
         date_str = data.content.get("date_us", "")
         if date_str:
-            date_width = draw.textlength(date_str, font=date_font)
-            date_x = content_right - date_width
-            date_y = content_bottom - 10  # 10 pixels from bottom of content area
-            draw.text((date_x, date_y), date_str, fill=(128, 128, 128), font=date_font)
+            date_x = 2  # Left-aligned with small padding
+            # Calculate y position to align with bottom
+            date_bbox = draw.textbbox((0, 0), date_str, font=date_font)
+            date_height = date_bbox[3] - date_bbox[1]
+            date_y = self.height - date_height - 2  # Bottom-aligned with small padding
+            draw.text((date_x, date_y), date_str, fill=date_color, font=date_font)
 
         return img
 
