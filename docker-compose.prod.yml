@@ -14,8 +14,12 @@ services:
       # trix-server connection (MatrixPortal M4)
       - TRIX_SERVER_URL=http://trix-server.local/bitmap
       # IP address for trix-server.local (optional - enables /etc/hosts entry)
-      # Set this to your MatrixPortal M4's IP address
-      - TRIX_SERVER_IP=192.168.1.115
+      # Set this to your MatrixPortal M4's IP address in .env file
+      - TRIX_SERVER_IP=${TRIX_SERVER_IP:-}
+
+      # trix-server API key (required)
+      # Must match the TRIX_API_KEY set in trix-server settings.toml
+      - TRIX_API_KEY=${TRIX_API_KEY:-}
 
       # Display configuration
       - MATRIX_WIDTH=64
