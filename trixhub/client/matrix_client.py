@@ -23,7 +23,8 @@ class MatrixClient:
     CLEAR_ENDPOINT = "/clear"
 
     def __init__(self, server_hostname: str, width: int = 64, height: int = 32,
-                 output_dir: str = "output", timeout: int = 5, save_debug_files: bool = False):
+                 output_dir: str = "output", timeout: int = 5, save_debug_files: bool = False,
+                 quiet: bool = False):
         """
         Initialize Matrix Portal client.
 
@@ -34,6 +35,7 @@ class MatrixClient:
             output_dir: Directory to save debug bitmap files (only used if save_debug_files=True)
             timeout: HTTP request timeout in seconds (default: 5)
             save_debug_files: If True, save bitmap files locally for debugging (default: False)
+            quiet: If True, suppress non-error log messages (default: False)
         """
         self.server_hostname = server_hostname.rstrip('/')
         self.width = width
@@ -41,6 +43,7 @@ class MatrixClient:
         self.output_dir = output_dir
         self.timeout = timeout
         self.save_debug_files = save_debug_files
+        self.quiet = quiet
 
         # Create output directory if debug mode enabled
         if save_debug_files and not os.path.exists(output_dir):
@@ -68,6 +71,18 @@ class MatrixClient:
 
             # Convert image to BMP bytes
             bmp_bytes = self._image_to_bmp_bytes(image)
+
+            # Validate BMP size (54-byte header + width * height * 3 bytes per pixel)
+            expected_size = 54 + (self.width * self.height * 3)
+            actual_size = len(bmp_bytes)
+
+            if actual_size != expected_size:
+                print(f"[MatrixClient] ERROR: BMP size mismatch! Expected {expected_size} bytes, got {actual_size} bytes")
+                print(f"[MatrixClient]   Image: {image.size}, mode: {image.mode}")
+                return False
+
+            if not self.quiet:
+                print(f"[MatrixClient] Validated BMP size: {actual_size} bytes (expected: {expected_size})")
 
             # POST to trix-server
             response = requests.post(

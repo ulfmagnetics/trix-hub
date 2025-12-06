@@ -59,7 +59,8 @@ class BaseScheduler(ABC):
                 server_hostname=self.matrix_config.get("server_hostname", "http://trix-server.local"),
                 width=self.matrix_config.get("width", 64),
                 height=self.matrix_config.get("height", 32),
-                output_dir=self.matrix_config.get("output_dir", "output")
+                output_dir=self.matrix_config.get("output_dir", "output"),
+                quiet=self.quiet,
             )
             self.renderer = BitmapRenderer(
                 width=self.matrix_config.get("width", 64),
