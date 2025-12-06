@@ -6,7 +6,7 @@ Provides common functionality for all scheduler modes.
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from trixhub.config import get_config
 from trixhub.providers import TimeProvider, WeatherProvider, BusArrivalProvider, DataProvider
@@ -135,7 +135,7 @@ class BaseScheduler(ABC):
         """
         return self.scheduler_config.get("provider_rotation", [])
 
-    def _get_display_duration(self, provider_name: str, data: Any, override_duration: int = None) -> int:
+    def _get_display_duration(self, provider_name: str, data: Any, override_duration: Optional[int] = None) -> int:
         """
         Get display duration for a provider.
 
@@ -165,7 +165,7 @@ class BaseScheduler(ABC):
         # Fall back to default
         return self.default_duration
 
-    def _display_provider(self, provider_name: str, duration_override: int = None) -> bool:
+    def _display_provider(self, provider_name: str, duration_override: Optional[int] = None) -> bool:
         """
         Fetch data from provider, render it, and display/post.
 
@@ -195,6 +195,9 @@ class BaseScheduler(ABC):
             data = provider.get_data()
 
             if self.debug:
+                if not self.ascii_renderer:
+                    raise RuntimeError("ASCII renderer not initialized in debug mode")
+
                 # Debug mode: render ASCII and print to console
                 ascii_output = self.ascii_renderer.render(data)
                 print()
@@ -203,6 +206,9 @@ class BaseScheduler(ABC):
                 print("─" * 70)
                 print()
             else:
+                if not self.renderer or not self.client:
+                    raise RuntimeError("Renderer or client not initialized in normal mode")
+
                 # Normal mode: render bitmap and post to matrix
                 bitmap = self.renderer.render(data)
                 success = self.client.post_bitmap(bitmap)

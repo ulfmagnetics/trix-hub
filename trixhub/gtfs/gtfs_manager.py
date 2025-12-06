@@ -34,7 +34,7 @@ def _get_gtfs_kit():
 _manager_instances = {}
 
 def get_gtfs_manager(static_url: str, realtime_url: str,
-                     cache_dir: str = None, cache_days: int = 30) -> 'GTFSManager':
+                     cache_dir: Optional[str] = None, cache_days: int = 30) -> 'GTFSManager':
     """
     Get or create a singleton GTFSManager instance.
 
@@ -77,7 +77,7 @@ class GTFSManager:
     - Merging scheduled and realtime arrivals
     """
 
-    def __init__(self, static_url: str, realtime_url: str, cache_dir: str = None, cache_days: int = 30):
+    def __init__(self, static_url: str, realtime_url: str, cache_dir: Optional[str] = None, cache_days: int = 30):
         """
         Initialize GTFS manager.
 
@@ -103,9 +103,9 @@ class GTFSManager:
 
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        # GTFS feed object (loaded lazily)
-        self.feed = None
-        self.last_static_update = None
+        # GTFS feed object (loaded lazily from gtfs_kit - typed as Any since gtfs_kit lacks type stubs)
+        self.feed: Any = None
+        self.last_static_update: Optional[datetime] = None
 
     def _download_static_feed(self) -> str:
         """
@@ -380,7 +380,7 @@ class GTFSManager:
             response.raise_for_status()
 
             # Parse protobuf
-            feed = gtfs_realtime_pb2.FeedMessage()
+            feed = gtfs_realtime_pb2.FeedMessage() # pyright: ignore[reportAttributeAccessIssue]
             feed.ParseFromString(response.content)
 
             # Extract trip updates for this stop
