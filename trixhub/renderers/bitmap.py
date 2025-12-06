@@ -112,12 +112,12 @@ class BitmapRenderer(Renderer):
 
         # Get time string and draw at top left
         time_str = data.content.get("time_12h", "??:??")
-        time_x = 2  # Left-aligned with small padding
-        time_y = 2  # Top-aligned with small padding
+        time_x = 0  # Left-aligned with small padding
+        time_y = 0  # Top-aligned with small padding
         draw.text((time_x, time_y), time_str, fill=time_color, font=time_font)
 
         # Get date string and draw at bottom left
-        date_str = data.content.get("date_us", "")
+        date_str = data.content.get("date_ordinal", "")
         if date_str:
             date_x = 2  # Left-aligned with small padding
             # Calculate y position to align with bottom
