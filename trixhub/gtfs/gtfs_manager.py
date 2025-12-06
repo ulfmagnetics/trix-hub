@@ -376,7 +376,7 @@ class GTFSManager:
 
         try:
             # Fetch GTFS-Realtime feed
-            response = requests.get(self.realtime_url, timeout=10)
+            response = requests.get(self.realtime_url, timeout=20)
             response.raise_for_status()
 
             # Parse protobuf
