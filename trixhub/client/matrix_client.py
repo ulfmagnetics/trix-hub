@@ -7,6 +7,7 @@ Handles communication with trix-server (MatrixPortal M4) via HTTP POST.
 import io
 import os
 from datetime import datetime
+from typing import Optional
 from PIL import Image
 import requests
 
@@ -24,7 +25,7 @@ class MatrixClient:
 
     def __init__(self, server_hostname: str, width: int = 64, height: int = 32,
                  output_dir: str = "output", timeout: int = 5, save_debug_files: bool = False,
-                 quiet: bool = False):
+                 quiet: bool = False, api_key: Optional[str] = None):
         """
         Initialize Matrix Portal client.
 
@@ -36,6 +37,7 @@ class MatrixClient:
             timeout: HTTP request timeout in seconds (default: 5)
             save_debug_files: If True, save bitmap files locally for debugging (default: False)
             quiet: If True, suppress non-error log messages (default: False)
+            api_key: API key for trix-server authentication (default: reads from TRIX_API_KEY env var)
         """
         self.server_hostname = server_hostname.rstrip('/')
         self.width = width
@@ -44,6 +46,11 @@ class MatrixClient:
         self.timeout = timeout
         self.save_debug_files = save_debug_files
         self.quiet = quiet
+
+        # Get API key from parameter or environment variable
+        self.api_key = api_key or os.environ.get('TRIX_API_KEY')
+        if not self.api_key:
+            raise ValueError("API key is required. Set TRIX_API_KEY environment variable or pass api_key parameter.")
 
         # Create output directory if debug mode enabled
         if save_debug_files and not os.path.exists(output_dir):
@@ -88,7 +95,10 @@ class MatrixClient:
             response = requests.post(
                 url,
                 data=bmp_bytes,
-                headers={'Content-Type': 'image/bmp'},
+                headers={
+                    'Content-Type': 'image/bmp',
+                    'X-Trix-API-Key': self.api_key
+                },
                 timeout=self.timeout
             )
 
@@ -120,7 +130,11 @@ class MatrixClient:
         """
         url = self.server_hostname + self.CLEAR_ENDPOINT
         try:
-            response = requests.get(url, timeout=self.timeout)
+            response = requests.get(
+                url,
+                headers={'X-Trix-API-Key': self.api_key},
+                timeout=self.timeout
+            )
             if response.status_code == 200:
                 return True
             else:
@@ -177,6 +191,7 @@ class MatrixClient:
         try:
             response = requests.get(
                 self.server_hostname,
+                headers={'X-Trix-API-Key': self.api_key},
                 timeout=self.timeout
             )
             return response.status_code in [200, 404]  # 404 is ok, means server is up
