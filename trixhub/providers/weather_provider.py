@@ -5,7 +5,7 @@ Fetches current weather and short-term forecast for configured location.
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import requests
 import math
 
@@ -49,7 +49,7 @@ class WeatherProvider(DataProvider):
         99: "thunderstorm",  # Thunderstorm with heavy hail
     }
 
-    def __init__(self, config_key: str = None):
+    def __init__(self, config_key: Optional[str] = None):
         """Initialize weather provider with configuration."""
         super().__init__()
         config_key = config_key or "weather"
@@ -233,7 +233,7 @@ class WeatherProvider(DataProvider):
                 }
             )
 
-    def _map_weather_code(self, code: int, is_night: bool = False, moon_phase: float = None) -> str:
+    def _map_weather_code(self, code: int, is_night: bool = False, moon_phase: Optional[float] = None) -> str:
         """
         Map Open-Meteo weather code to internal condition name.
 

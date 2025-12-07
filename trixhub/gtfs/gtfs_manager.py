@@ -418,7 +418,7 @@ class GTFSManager:
 
         return arrivals
 
-    def get_merged_arrivals(self, stop_id: str, window_minutes: int = 60) -> List[Dict[str, Any]]:
+    def get_merged_arrivals(self, stop_id: Optional[str] = None, window_minutes: int = 60) -> List[Dict[str, Any]]:
         """
         Get merged scheduled and realtime arrivals.
 
@@ -431,6 +431,9 @@ class GTFSManager:
         Returns:
             Sorted list of arrivals with all fields populated
         """
+        if stop_id is None:
+            raise ValueError("stop_id must be provided to get merged arrivals")
+
         # Get both scheduled and realtime
         scheduled = self.get_scheduled_arrivals(stop_id, window_minutes)
         realtime = self.get_realtime_arrivals(stop_id)

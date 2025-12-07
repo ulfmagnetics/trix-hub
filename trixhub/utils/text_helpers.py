@@ -9,7 +9,7 @@ from typing import Optional
 from PIL import ImageDraw, ImageFont
 
 
-def get_text_bbox(text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
+def get_text_bbox(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont) -> tuple[int, int]:
     """
     Get the bounding box size of text.
 
@@ -26,13 +26,13 @@ def get_text_bbox(text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
     draw = ImageDraw.Draw(temp_img)
 
     bbox = draw.textbbox((0, 0), text, font=font)
-    width = bbox[2] - bbox[0]
-    height = bbox[3] - bbox[1]
+    width = int(bbox[2] - bbox[0])
+    height = int(bbox[3] - bbox[1])
 
     return (width, height)
 
 
-def center_text_x(text: str, font: ImageFont.FreeTypeFont, container_width: int) -> int:
+def center_text_x(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, container_width: int) -> int:
     """
     Calculate x coordinate to center text horizontally.
 
@@ -48,7 +48,7 @@ def center_text_x(text: str, font: ImageFont.FreeTypeFont, container_width: int)
     return (container_width - text_width) // 2
 
 
-def center_text_y(text: str, font: ImageFont.FreeTypeFont, container_height: int) -> int:
+def center_text_y(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, container_height: int) -> int:
     """
     Calculate y coordinate to center text vertically.
 
@@ -64,7 +64,7 @@ def center_text_y(text: str, font: ImageFont.FreeTypeFont, container_height: int
     return (container_height - text_height) // 2
 
 
-def center_text(text: str, font: ImageFont.FreeTypeFont,
+def center_text(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
                 container_width: int, container_height: int) -> tuple[int, int]:
     """
     Calculate coordinates to center text both horizontally and vertically.

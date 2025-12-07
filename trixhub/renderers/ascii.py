@@ -7,6 +7,7 @@ as 64x16 terminal characters, providing pixel-perfect terminal preview.
 """
 
 import os
+from typing import Optional, cast
 from PIL import Image
 from trixhub.providers.base import DisplayData
 from trixhub.renderers.base import Renderer
@@ -94,6 +95,9 @@ class ASCIIRenderer(Renderer):
             img = img.convert('RGB')
 
         pixels = img.load()
+        if pixels is None:
+            raise ValueError("Failed to load image pixels")
+
         output_lines = []
 
         # Process image in pairs of rows (each pair becomes one terminal row)
@@ -102,11 +106,12 @@ class ASCIIRenderer(Renderer):
 
             for col in range(self.width):
                 # Get top and bottom pixels
-                top_pixel = pixels[col, row_pair]
+                # Cast to tuple[int, int, int] since we converted to RGB mode
+                top_pixel = cast(tuple[int, int, int], pixels[col, row_pair])
 
                 # Handle odd heights (last row might not have a pair)
                 if row_pair + 1 < self.height:
-                    bottom_pixel = pixels[col, row_pair + 1]
+                    bottom_pixel = cast(tuple[int, int, int], pixels[col, row_pair + 1])
                 else:
                     bottom_pixel = (0, 0, 0)  # Black for missing pixel
 
@@ -122,7 +127,7 @@ class ASCIIRenderer(Renderer):
 
         return "\n".join(output_lines)
 
-    def _rgb_half_block(self, top_rgb: tuple, bottom_rgb: tuple) -> str:
+    def _rgb_half_block(self, top_rgb: tuple[int, int, int], bottom_rgb: tuple[int, int, int]) -> str:
         """
         Create half-block character with 24-bit true color.
 
@@ -139,7 +144,7 @@ class ASCIIRenderer(Renderer):
         # Background (top pixel) + Foreground (bottom pixel) + Character
         return f"\033[48;2;{r_top};{g_top};{b_top}m\033[38;2;{r_bot};{g_bot};{b_bot}m{self.LOWER_HALF_BLOCK}"
 
-    def _256_half_block(self, top_rgb: tuple, bottom_rgb: tuple) -> str:
+    def _256_half_block(self, top_rgb: tuple[int, int, int], bottom_rgb: tuple[int, int, int]) -> str:
         """
         Create half-block character with 256-color palette.
 
@@ -158,7 +163,7 @@ class ASCIIRenderer(Renderer):
         # Background (top pixel) + Foreground (bottom pixel) + Character
         return f"\033[48;5;{top_color}m\033[38;5;{bot_color}m{self.LOWER_HALF_BLOCK}"
 
-    def _rgb_to_256(self, rgb: tuple) -> int:
+    def _rgb_to_256(self, rgb: tuple[int, int, int]) -> int:
         """
         Convert RGB color to nearest 256-color palette index.
 
@@ -196,7 +201,7 @@ class ASCIIRenderer(Renderer):
         # Calculate palette index
         return 16 + (r_index * 36) + (g_index * 6) + b_index
 
-    def render_frame(self, data: DisplayData, title: str = None) -> str:
+    def render_frame(self, data: DisplayData, title: Optional[str] = None) -> str:
         """
         Render with optional title above the frame.
 

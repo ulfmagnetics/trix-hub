@@ -4,6 +4,7 @@ Simple rotation scheduler for trix-hub.
 Cycles through configured providers in sequence.
 """
 
+from typing import Optional
 from .base import BaseScheduler
 
 
@@ -32,7 +33,7 @@ class SimpleRotationScheduler(BaseScheduler):
         """Get list of providers to initialize from rotation config."""
         return self.scheduler_config.get("provider_rotation", [])
 
-    def _get_provider_duration_override(self, provider_name: str) -> int:
+    def _get_provider_duration_override(self, provider_name: str) -> Optional[int]:
         """
         Get duration override from rotation config for a provider.
 

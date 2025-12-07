@@ -25,9 +25,9 @@ class BusArrivalProvider(DataProvider):
     - Automatic fallback to scheduled data if realtime unavailable
     """
 
-    def __init__(self, stop_id: str = None, priority_routes: List[str] = None,
-                 gtfs_static_url: str = None, gtfs_realtime_url: str = None,
-                 config_key: str = None, quiet: bool = False):
+    def __init__(self, stop_id: Optional[str] = None, priority_routes: Optional[List[str]] = None,
+                 gtfs_static_url: Optional[str] = None, gtfs_realtime_url: Optional[str] = None,
+                 config_key: Optional[str] = None, quiet: bool = False):
         """
         Initialize bus arrival provider.
 

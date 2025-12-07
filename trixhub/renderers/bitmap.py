@@ -7,6 +7,7 @@ Renders DisplayData to PIL Image objects suitable for 64x32 RGB LED matrices.
 import os
 import random
 from PIL import Image, ImageDraw, ImageFont
+from typing import Optional
 from trixhub.providers.base import DisplayData
 from trixhub.renderers.base import Renderer
 from trixhub.renderers.weather_icons import draw_weather_icon
@@ -20,7 +21,7 @@ class BitmapRenderer(Renderer):
     Creates 64x32 RGB bitmaps suitable for Matrix Portal displays.
     """
 
-    def __init__(self, width: int = 64, height: int = 32, font_path: str = None):
+    def __init__(self, width: int = 64, height: int = 32, font_path: Optional[str] = None):
         """
         Initialize bitmap renderer.
 
@@ -451,7 +452,7 @@ class BitmapRenderer(Renderer):
 
         return img
 
-    def get_font(self, size: int) -> ImageFont.FreeTypeFont:
+    def get_font(self, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         """
         Get a font of specified size.
 
