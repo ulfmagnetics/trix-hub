@@ -18,6 +18,10 @@ else
     echo "[entrypoint] TRIX_SERVER_IP not set, skipping /etc/hosts configuration"
 fi
 
+# Ensure GTFS cache directory exists and is writable by trixhub
+mkdir -p /app/cache/gtfs
+chown trixhub:trixhub /app/cache/gtfs
+
 # Execute the main application command as the trixhub user
 # Note: Using su (without -) to preserve environment variables like PYTHONUNBUFFERED
 if [ "$#" -eq 0 ]; then
