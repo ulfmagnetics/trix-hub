@@ -20,7 +20,7 @@ fi
 
 # Ensure GTFS cache directory exists and is writable by trixhub
 mkdir -p /app/cache/gtfs
-chown trixhub:trixhub /app/cache/gtfs
+chown -R trixhub:trixhub /app/cache
 
 # Execute the main application command as the trixhub user
 # Note: Using su (without -) to preserve environment variables like PYTHONUNBUFFERED
